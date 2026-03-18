@@ -1,0 +1,130 @@
+/* app/globals.css */
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Global styles and Tailwind directives                                        */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base resets and defaults ─────────────────────────────────────────────── */
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-parchment text-ink font-sans antialiased;
+  }
+
+  /* Headings use the serif font */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+
+  /* Subtle focus ring for accessibility */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-rust;
+  }
+}
+
+/* ── Reusable component styles ───────────────────────────────────────────── */
+@layer components {
+
+  /* Status badge variants – applied via JS based on Idea.status */
+  .badge-seed {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+           bg-sage-light text-sage;
+  }
+  .badge-growing {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+           bg-amber-light text-amber;
+  }
+  .badge-published {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+           bg-rust-light text-rust;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded
+           bg-ink text-parchment text-sm font-medium
+           hover:bg-ink-light transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Ghost / secondary button */
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded
+           border border-parchment-border text-ink text-sm font-medium
+           hover:bg-parchment-dark transition-colors duration-150;
+  }
+
+  /* Text input */
+  .input {
+    @apply w-full px-3 py-2 rounded border border-parchment-border
+           bg-white text-ink placeholder-ink-muted text-sm
+           focus:outline-none focus:ring-1 focus:ring-ink
+           transition-shadow duration-150;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-white rounded border border-parchment-border
+           hover:border-ink-muted transition-colors duration-150;
+  }
+}
+
+/* ── Tiptap editor content styles ───────────────────────────────────────── */
+/* These styles are applied to the contenteditable div rendered by Tiptap.  */
+.ProseMirror {
+  @apply outline-none min-h-[200px];
+}
+
+.ProseMirror p {
+  @apply leading-relaxed mb-3;
+}
+
+.ProseMirror h1 {
+  @apply font-serif text-2xl font-semibold mt-6 mb-3 text-ink;
+}
+
+.ProseMirror h2 {
+  @apply font-serif text-xl font-semibold mt-5 mb-2 text-ink;
+}
+
+.ProseMirror h3 {
+  @apply font-serif text-lg font-medium mt-4 mb-2 text-ink;
+}
+
+.ProseMirror ul {
+  @apply list-disc list-inside mb-3 space-y-1;
+}
+
+.ProseMirror ol {
+  @apply list-decimal list-inside mb-3 space-y-1;
+}
+
+.ProseMirror blockquote {
+  @apply border-l-4 border-parchment-border pl-4 italic text-ink-muted my-4;
+}
+
+.ProseMirror code {
+  @apply font-mono text-sm bg-parchment-dark px-1.5 py-0.5 rounded;
+}
+
+.ProseMirror pre {
+  @apply bg-parchment-dark rounded p-4 overflow-x-auto my-4;
+}
+
+.ProseMirror pre code {
+  @apply bg-transparent p-0;
+}
+
+/* Placeholder text when editor is empty */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  @apply text-ink-muted float-left h-0 pointer-events-none;
+}
