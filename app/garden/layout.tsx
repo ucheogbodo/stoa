@@ -28,10 +28,18 @@ export default function GardenLayout({
             <Link href="/garden" className="hover:text-ink transition-colors">
               Garden
             </Link>
-            {/* Agora link placeholder — Phase 2 */}
-            <span className="opacity-40 cursor-not-allowed" title="Coming in Phase 2">
+            <Link href="/garden/projects" className="hover:text-ink transition-colors">
+              Projects
+            </Link>
+            <Link href="/garden/graph" className="hover:text-ink transition-colors">
+              Graph
+            </Link>
+            <Link href="/agora" className="hover:text-ink transition-colors">
               Agora
-            </span>
+            </Link>
+            <Link href="/garden/admin/flagged" className="hover:text-ink transition-colors text-xs opacity-60">
+              Admin
+            </Link>
           </div>
 
           {/* Sign out */}

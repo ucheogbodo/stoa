@@ -12,94 +12,147 @@ datasource db {
 }
 
 // ─── User ────────────────────────────────────────────────────────────────────
-// Represents a person who can log in. In Phase 1 there is only one admin user.
-// The schema is designed to support multiple users later.
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String?
-  passwordHash String   // bcrypt hash — never store plain text passwords
+  passwordHash String
   createdAt    DateTime @default(now())
 
-  // A user owns many ideas and tags
-  ideas        Idea[]
-  tags         Tag[]
+  ideas    Idea[]
+  tags     Tag[]
+  projects Project[]
 }
 
 // ─── Idea ─────────────────────────────────────────────────────────────────────
-// The core content unit. Think of it as a note / entry in the garden.
-// `body` is stored as JSON because Tiptap outputs a ProseMirror JSON document.
 model Idea {
-  id        String      @id @default(cuid())
-  title     String
-  body      Json?       // Tiptap ProseMirror JSON document
-  status    IdeaStatus  @default(SEED)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id                 String             @id @default(cuid())
+  title              String
+  body               Json?
+  status             IdeaStatus         @default(SEED)
+  contentHash        String?
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
-  // Ownership
-  userId    String
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Many-to-many with Tag via IdeaTag join table
-  tags      IdeaTag[]
-
-  // Self-referential many-to-many for bidirectional graph links
-  // An idea can link TO many other ideas, and be linked FROM many ideas
-  linksFrom IdeaLink[]  @relation("LinkFrom") // links where THIS idea is the source
-  linksTo   IdeaLink[]  @relation("LinkTo")   // links where THIS idea is the target
+  tags               IdeaTag[]
+  linksFrom          IdeaLink[]          @relation("LinkFrom")
+  linksTo            IdeaLink[]          @relation("LinkTo")
+  projects           IdeaProject[]
+  verificationEvents VerificationEvent[]
 
   @@index([userId])
   @@index([status])
+  @@index([verificationStatus])
 }
 
-// The three growth stages of an idea in the garden
 enum IdeaStatus {
-  SEED      // A raw, nascent thought
-  GROWING   // Being actively developed
-  PUBLISHED // Ready to be shared in the Agora
+  SEED
+  GROWING
+  PUBLISHED
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  REVIEW
+  VERIFIED
+  FLAGGED
 }
 
 // ─── Tag ─────────────────────────────────────────────────────────────────────
-// A label used to categorise and filter ideas.
 model Tag {
   id     String    @id @default(cuid())
   name   String
-  slug   String    // URL-friendly version of the name, e.g. "philosophy"
+  slug   String
 
-  // Tags belong to a user (so tags from different users don't collide)
   userId String
   user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   ideas  IdeaTag[]
 
-  @@unique([slug, userId]) // each user's slugs must be unique
+  @@unique([slug, userId])
 }
 
 // ─── IdeaTag ──────────────────────────────────────────────────────────────────
-// Join table connecting Ideas and Tags (many-to-many).
 model IdeaTag {
   ideaId String
   tagId  String
 
-  idea   Idea   @relation(fields: [ideaId], references: [id], onDelete: Cascade)
-  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  idea Idea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId],  references: [id], onDelete: Cascade)
 
-  @@id([ideaId, tagId]) // composite primary key
+  @@id([ideaId, tagId])
 }
 
 // ─── IdeaLink ─────────────────────────────────────────────────────────────────
-// Self-referential join table for the knowledge graph.
-// Each row represents a directed connection from one idea to another.
-// Because the connection is "bidirectional" in the UI, when you link A → B
-// we store ONE row (fromIdeaId=A, toIdeaId=B). Relations are exposed from both
-// sides above (linksFrom / linksTo) so we can query in either direction.
 model IdeaLink {
   fromIdeaId String
   toIdeaId   String
 
-  fromIdea   Idea   @relation("LinkFrom", fields: [fromIdeaId], references: [id], onDelete: Cascade)
-  toIdea     Idea   @relation("LinkTo",   fields: [toIdeaId],   references: [id], onDelete: Cascade)
+  fromIdea Idea @relation("LinkFrom", fields: [fromIdeaId], references: [id], onDelete: Cascade)
+  toIdea   Idea @relation("LinkTo",   fields: [toIdeaId],   references: [id], onDelete: Cascade)
 
-  @@id([fromIdeaId, toIdeaId]) // no duplicate links between the same pair
+  @@id([fromIdeaId, toIdeaId])
+}
+
+// ─── Project ─────────────────────────────────────────────────────────────────
+// A named workbench that groups related ideas and reference files.
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  ideas IdeaProject[]
+  files ProjectFile[]
+
+  @@index([userId])
+}
+
+// ─── IdeaProject ─────────────────────────────────────────────────────────────
+model IdeaProject {
+  ideaId    String
+  projectId String
+
+  idea    Idea    @relation(fields: [ideaId],    references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([ideaId, projectId])
+}
+
+// ─── ProjectFile ─────────────────────────────────────────────────────────────
+// A reference file uploaded to a Project workbench.
+model ProjectFile {
+  id         String   @id @default(cuid())
+  filename   String
+  mimeType   String
+  storageUrl String
+  sizeBytes  Int?
+  uploadedAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// ─── VerificationEvent ────────────────────────────────────────────────────────
+// Audit trail for every originality check performed on an Idea.
+model VerificationEvent {
+  id        String             @id @default(cuid())
+  status    VerificationStatus
+  reason    String?
+  createdAt DateTime           @default(now())
+
+  ideaId String
+  idea   Idea   @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
 }

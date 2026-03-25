@@ -1,33 +1,35 @@
-// app/garden/ideas/[id]/page.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Full-page idea editor.
-//
-// Routes:
-//   /garden/ideas/new       → creates a new idea
-//   /garden/ideas/[id]      → edits an existing idea
-//
-// This is a CLIENT component because it manages lots of interactive state
-// (editor content, tags, links, save status).
-// ─────────────────────────────────────────────────────────────────────────────
-
+// app/garden/ideas/[id]/page.tsx — Phase 3 update
+// Added: debounced auto-save, verification status badge, Add-to-Project sidebar panel.
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Editor } from "@/components/Editor";
 import { TagInput, type TagData } from "@/components/TagInput";
 import { LinkedIdeasPanel, type LinkedIdea } from "@/components/LinkedIdeasPanel";
 import type { JSONContent } from "@tiptap/react";
-import { IdeaStatus } from "@prisma/client";
 
-type Status = keyof typeof IdeaStatus;
+type Status = "SEED" | "GROWING" | "PUBLISHED";
+type VerificationStatus = "UNVERIFIED" | "REVIEW" | "VERIFIED" | "FLAGGED";
 
 const statusOptions: { value: Status; label: string }[] = [
   { value: "SEED", label: "🌱 Seed" },
   { value: "GROWING", label: "🌿 Growing" },
   { value: "PUBLISHED", label: "📖 Published" },
 ];
+
+const verificationBadge: Record<VerificationStatus, { label: string; className: string }> = {
+  UNVERIFIED: { label: "Unverified", className: "text-ink-muted bg-parchment-dark" },
+  REVIEW: { label: "⚠ Under Review", className: "text-amber-800 bg-amber-100" },
+  VERIFIED: { label: "✓ Verified", className: "text-green-800 bg-green-100" },
+  FLAGGED: { label: "✕ Flagged", className: "text-red-800 bg-red-100" },
+};
+
+interface Project {
+  id: string;
+  name: string;
+}
 
 export default function IdeaEditorPage() {
   const params = useParams();
@@ -43,11 +45,18 @@ export default function IdeaEditorPage() {
   const [ideaId, setIdeaId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [loading, setLoading] = useState(!isNew);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>("UNVERIFIED");
+  const [verifying, setVerifying] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [ideaProjectIds, setIdeaProjectIds] = useState<string[]>([]);
+
+  // Ref to hold the latest save function for the debouncer
+  const saveRef = useRef<() => Promise<void>>();
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>();
 
   // ── Load existing idea ─────────────────────────────────────────────────────
   useEffect(() => {
     if (isNew) return;
-
     fetch(`/api/ideas/${params.id}`)
       .then((r) => r.json())
       .then((data) => {
@@ -55,27 +64,32 @@ export default function IdeaEditorPage() {
         setTitle(data.title ?? "");
         setBody(data.body ?? null);
         setStatus(data.status as Status);
+        setVerificationStatus((data.verificationStatus as VerificationStatus) ?? "UNVERIFIED");
         setTags(data.tags.map((it: { tag: TagData }) => it.tag));
-        setLinkedIdeas(
-          [
-            ...data.linksFrom.map((l: { toIdea: LinkedIdea }) => l.toIdea),
-            ...data.linksTo.map((l: { fromIdea: LinkedIdea }) => l.fromIdea),
-          ]
-        );
+        setLinkedIdeas([
+          ...data.linksFrom.map((l: { toIdea: LinkedIdea }) => l.toIdea),
+          ...data.linksTo.map((l: { fromIdea: LinkedIdea }) => l.fromIdea),
+        ]);
+        setIdeaProjectIds(data.projects?.map((p: { projectId: string }) => p.projectId) ?? []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [isNew, params.id]);
 
+  // ── Load projects (for the sidebar panel) ──────────────────────────────────
+  useEffect(() => {
+    fetch("/api/projects")
+      .then((r) => r.json())
+      .then((data) => setProjects(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+
   // ── Save ───────────────────────────────────────────────────────────────────
   const save = useCallback(async () => {
     setSaveState("saving");
-
     try {
       let res;
-
       if (ideaId) {
-        // Update existing idea
         res = await fetch(`/api/ideas/${ideaId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -88,24 +102,16 @@ export default function IdeaEditorPage() {
           }),
         });
       } else {
-        // Create new idea
         res = await fetch("/api/ideas", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title,
-            body,
-            status,
-            tagIds: tags.map((t) => t.id),
-          }),
+          body: JSON.stringify({ title, body, status, tagIds: tags.map((t) => t.id) }),
         });
       }
 
       if (!res.ok) throw new Error("Save failed");
-
       const saved = await res.json();
 
-      // If this was a new idea, update IDs and URL without full reload
       if (!ideaId) {
         setIdeaId(saved.id);
         router.replace(`/garden/ideas/${saved.id}`);
@@ -119,19 +125,56 @@ export default function IdeaEditorPage() {
     }
   }, [ideaId, title, body, status, tags, linkedIdeas, router]);
 
-  // ── Keyboard shortcut: Ctrl/Cmd + S to save ───────────────────────────────
+  // Keep saveRef in sync so debouncer always calls latest version
+  useEffect(() => { saveRef.current = save; }, [save]);
+
+  // ── Debounced auto-save (1.5s after last change) ───────────────────────────
+  useEffect(() => {
+    if (isNew && !ideaId) return; // Don't auto-save before first manual save (needs a title)
+    clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => { saveRef.current?.(); }, 1500);
+    return () => clearTimeout(autoSaveTimer.current);
+  }, [title, body, status, tags, linkedIdeas, isNew, ideaId]);
+
+  // ── Verification: run when status changes to PUBLISHED ────────────────────
+  useEffect(() => {
+    if (status !== "PUBLISHED" || !ideaId) return;
+    setVerifying(true);
+    fetch(`/api/ideas/${ideaId}/verify`, { method: "POST" })
+      .then((r) => r.json())
+      .then((data) => setVerificationStatus(data.verificationStatus ?? "UNVERIFIED"))
+      .catch(() => {})
+      .finally(() => setVerifying(false));
+  }, [status, ideaId]);
+
+  // ── Keyboard shortcut ─────────────────────────────────────────────────────
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-        e.preventDefault();
-        save();
-      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); save(); }
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [save]);
 
-  // ── Loading skeleton ───────────────────────────────────────────────────────
+  // ── Project linking helpers ───────────────────────────────────────────────
+  async function toggleProjectLink(projectId: string) {
+    if (!ideaId) return;
+    const isLinked = ideaProjectIds.includes(projectId);
+
+    if (isLinked) {
+      await fetch(`/api/projects/${projectId}/ideas/${ideaId}`, { method: "DELETE" });
+      setIdeaProjectIds((ids) => ids.filter((id) => id !== projectId));
+    } else {
+      await fetch(`/api/projects/${projectId}/ideas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ideaId }),
+      });
+      setIdeaProjectIds((ids) => [...ids, projectId]);
+    }
+  }
+
+  // ── Loading skeleton ──────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="animate-pulse space-y-4 max-w-prose">
@@ -143,14 +186,14 @@ export default function IdeaEditorPage() {
     );
   }
 
-  // ── Editor layout ──────────────────────────────────────────────────────────
+  const badge = verificationBadge[verificationStatus];
+
+  // ── Editor layout ─────────────────────────────────────────────────────────
   return (
     <div className="flex gap-8 items-start">
 
-      {/* ── Main editing area ─────────────────────────────────────────────── */}
+      {/* ── Main editing area ─────────────────────────────────────────── */}
       <div className="flex-1 min-w-0">
-
-        {/* Back link */}
         <Link
           href="/garden"
           className="text-sm text-ink-muted hover:text-ink transition-colors mb-6 inline-flex items-center gap-1"
@@ -158,7 +201,6 @@ export default function IdeaEditorPage() {
           ← Garden
         </Link>
 
-        {/* Title */}
         <input
           type="text"
           value={title}
@@ -167,44 +209,28 @@ export default function IdeaEditorPage() {
           className="w-full font-serif text-3xl text-ink bg-transparent border-none outline-none placeholder-ink-muted mt-4 mb-6"
         />
 
-        {/* Editor */}
-        <Editor
-          initialContent={body}
-          onChange={setBody}
-          placeholder="A seed of thought…"
-        />
+        <Editor initialContent={body} onChange={setBody} placeholder="A seed of thought…" />
       </div>
 
-      {/* ── Sidebar ───────────────────────────────────────────────────────── */}
+      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <aside className="w-64 shrink-0 space-y-6 sticky top-24">
 
-        {/* Save button + status */}
-        <div className="space-y-2">
+        {/* Save button */}
+        <div className="space-y-1">
           <button
             type="button"
             onClick={save}
             disabled={saveState === "saving"}
             className="btn-primary w-full justify-center"
           >
-            {saveState === "saving"
-              ? "Saving…"
-              : saveState === "saved"
-              ? "✓ Saved"
-              : "Save"}
+            {saveState === "saving" ? "Saving…" : saveState === "saved" ? "✓ Saved" : "Save"}
           </button>
-
           {saveState === "error" && (
-            <p className="text-xs text-rust text-center">
-              Save failed. Please try again.
-            </p>
+            <p className="text-xs text-rust text-center">Save failed. Try again.</p>
           )}
-
-          <p className="text-xs text-ink-muted text-center">
-            Ctrl + S to save
-          </p>
+          <p className="text-xs text-ink-muted text-center">Auto-saves after typing</p>
         </div>
 
-        {/* Divider */}
         <hr className="border-parchment-border" />
 
         {/* Status selector */}
@@ -217,15 +243,35 @@ export default function IdeaEditorPage() {
             onChange={(e) => setStatus(e.target.value as Status)}
             className="input text-sm"
           >
-            {statusOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
+            {statusOptions.map((opt: { value: Status; label: string }) => (
+              <option key={String(opt.value)} value={String(opt.value)}>{opt.label}</option>
             ))}
           </select>
+
+          {/* Verification badge */}
+          {(status === "PUBLISHED" || verificationStatus !== "UNVERIFIED") && (
+            <div className="mt-2">
+              {verifying ? (
+                <p className="text-xs text-ink-muted">Checking originality…</p>
+              ) : (
+                <span className={`inline-block text-xs px-2 py-1 rounded-full font-medium ${badge.className}`}>
+                  {badge.label}
+                </span>
+              )}
+              {verificationStatus === "REVIEW" && (
+                <p className="text-xs text-amber-700 mt-1">
+                  Similar content detected. An admin will review before this publishes to the Agora.
+                </p>
+              )}
+              {verificationStatus === "FLAGGED" && (
+                <p className="text-xs text-red-700 mt-1">
+                  This idea has been blocked from the Agora due to a copyright concern.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Divider */}
         <hr className="border-parchment-border" />
 
         {/* Tags */}
@@ -236,8 +282,44 @@ export default function IdeaEditorPage() {
           <TagInput selectedTags={tags} onChange={setTags} />
         </div>
 
-        {/* Divider */}
         <hr className="border-parchment-border" />
+
+        {/* Projects */}
+        {projects.length > 0 && (
+          <>
+            <div>
+              <label className="block text-xs font-medium text-ink-muted uppercase tracking-wide mb-2">
+                Projects
+              </label>
+              {!ideaId && (
+                <p className="text-xs text-ink-muted">Save the idea first to add it to a project.</p>
+              )}
+              {ideaId && (
+                <ul className="space-y-1">
+                  {projects.map((project) => {
+                    const linked = ideaProjectIds.includes(project.id);
+                    return (
+                      <li key={project.id}>
+                        <button
+                          type="button"
+                          onClick={() => toggleProjectLink(project.id)}
+                          className={`w-full text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${
+                            linked
+                              ? "bg-sage/20 text-sage font-medium"
+                              : "text-ink-muted hover:bg-parchment-dark hover:text-ink"
+                          }`}
+                        >
+                          {linked ? "✓ " : "+ "}{project.name}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+            <hr className="border-parchment-border" />
+          </>
+        )}
 
         {/* Linked Ideas */}
         <LinkedIdeasPanel
