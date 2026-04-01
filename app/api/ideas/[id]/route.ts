@@ -77,6 +77,10 @@ export async function PATCH(
         ...(title !== undefined ? { title } : {}),
         ...(editorBody !== undefined ? { body: editorBody } : {}),
         ...(validStatus ? { status: validStatus } : {}),
+        // Stamp publishedAt once on the first transition to PUBLISHED
+        ...(validStatus === "PUBLISHED" && !(idea as unknown as { publishedAt: Date | null }).publishedAt
+          ? { publishedAt: new Date() }
+          : {}),
       },
     });
 

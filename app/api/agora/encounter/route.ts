@@ -38,8 +38,10 @@ export async function GET(req: NextRequest) {
       id: true,
       title: true,
       body: true,
+      createdAt: true,
+      publishedAt: true,
       updatedAt: true,
-      user: { select: { name: true } },
+      user: { select: { name: true, id: true } },
       tags: { select: { tag: { select: { name: true, slug: true } } } },
     },
   });

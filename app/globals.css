@@ -128,3 +128,39 @@
   content: attr(data-placeholder);
   @apply text-ink-muted float-left h-0 pointer-events-none;
 }
+
+/* ── Dark mode (default — the existing parchment theme is already warm/dark enough) */
+/* No overrides needed for default; we add a true light mode below.             */
+
+/* ── Light mode overrides ─────────────────────────────────────────────────── */
+/* Applied when <html data-theme="light"> is set by ThemeToggle.tsx            */
+[data-theme="light"] {
+  --color-parchment: #ffffff;
+  --color-parchment-dark: #f3f4f6;
+  --color-parchment-border: #e5e7eb;
+  --color-ink: #111827;
+  --color-ink-light: #1f2937;
+  --color-ink-muted: #6b7280;
+}
+
+[data-theme="light"] body {
+  background-color: #ffffff;
+  color: #111827;
+}
+
+[data-theme="light"] nav,
+[data-theme="light"] header {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-color: #e5e7eb !important;
+}
+
+[data-theme="light"] .card,
+[data-theme="light"] .input {
+  background-color: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+[data-theme="light"] .ProseMirror {
+  color: #111827;
+}
+

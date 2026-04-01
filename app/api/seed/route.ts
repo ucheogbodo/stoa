@@ -17,7 +17,7 @@ export async function GET() {
     });
     
     return NextResponse.json({ success: true, userId: user.id });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
   }
 }

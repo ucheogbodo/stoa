@@ -26,9 +26,15 @@ export default async function RootLayout({
   const session = await getServerSession(authOptions);
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Google Fonts are loaded via globals.css @import */}
+        {/* Anti-FOUC: read theme from localStorage before first paint */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('stoa-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`,
+          }}
+        />
       </head>
       <body>
         {/* SessionProvider makes the session available to all client components */}

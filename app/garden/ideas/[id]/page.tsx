@@ -1,5 +1,5 @@
-// app/garden/ideas/[id]/page.tsx — Phase 3 update
-// Added: debounced auto-save, verification status badge, Add-to-Project sidebar panel.
+// app/garden/ideas/[id]/page.tsx — Phase 4 update
+// Added: export dropdown (Markdown / HTML), reading time display, delete idea.
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Editor } from "@/components/Editor";
 import { TagInput, type TagData } from "@/components/TagInput";
 import { LinkedIdeasPanel, type LinkedIdea } from "@/components/LinkedIdeasPanel";
+import { getReadingTime, getWordCount } from "@/lib/readingTime";
 import type { JSONContent } from "@tiptap/react";
 
 type Status = "SEED" | "GROWING" | "PUBLISHED";
@@ -156,6 +157,23 @@ export default function IdeaEditorPage() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [save]);
 
+  // ── Export helper ─────────────────────────────────────────────────────────
+  function exportIdea(format: "md" | "pdf") {
+    if (!ideaId) return;
+    window.open(`/api/ideas/${ideaId}/export?format=${format}`, "_blank");
+  }
+
+  // ── Delete idea ───────────────────────────────────────────────────────────
+  async function deleteIdea() {
+    if (!ideaId) return;
+    const confirmed = window.confirm(
+      "Delete this idea permanently? This cannot be undone."
+    );
+    if (!confirmed) return;
+    await fetch(`/api/ideas/${ideaId}`, { method: "DELETE" });
+    router.push("/garden");
+  }
+
   // ── Project linking helpers ───────────────────────────────────────────────
   async function toggleProjectLink(projectId: string) {
     if (!ideaId) return;
@@ -230,6 +248,38 @@ export default function IdeaEditorPage() {
           )}
           <p className="text-xs text-ink-muted text-center">Auto-saves after typing</p>
         </div>
+
+        {/* Reading time + word count */}
+        {body && getWordCount(body) > 0 && (
+          <p className="text-xs text-ink-muted text-center">
+            {getWordCount(body)} words · {getReadingTime(body)}
+          </p>
+        )}
+
+        {/* Export */}
+        {ideaId && (
+          <div>
+            <label className="block text-xs font-medium text-ink-muted uppercase tracking-wide mb-2">
+              Export
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => exportIdea("md")}
+                className="btn-ghost text-xs flex-1 justify-center"
+              >
+                Markdown
+              </button>
+              <button
+                type="button"
+                onClick={() => exportIdea("pdf")}
+                className="btn-ghost text-xs flex-1 justify-center"
+              >
+                HTML/PDF
+              </button>
+            </div>
+          </div>
+        )}
 
         <hr className="border-parchment-border" />
 
@@ -327,6 +377,20 @@ export default function IdeaEditorPage() {
           linkedIdeas={linkedIdeas}
           onChange={setLinkedIdeas}
         />
+
+        {/* Delete */}
+        {ideaId && (
+          <>
+            <hr className="border-parchment-border" />
+            <button
+              type="button"
+              onClick={deleteIdea}
+              className="w-full text-xs text-rust hover:text-red-700 hover:bg-red-50 transition-colors py-1.5 px-3 rounded border border-transparent hover:border-red-200"
+            >
+              🗑 Delete this idea
+            </button>
+          </>
+        )}
       </aside>
     </div>
   );

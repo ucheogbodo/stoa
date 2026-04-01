@@ -19,9 +19,19 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 
+  // ── Phase 5: Philosopher's Profile ────────────────────────────────────────
+  inscription         String?  // The Philosopher's Inscription
+  epigraph            String?  // The Stoa (personal epigraph)
+  intellectualLineage Json?    // [{name, url?}] ordered array
+  epistemicStance     Json?    // {reasonFrom?, holdBeliefs?, uncertainAbout?}
+  intellectualSeasons Json?    // [{period, description}] ordered array
+  unresolvedQuestions Json?    // [string] ordered array
+  profilePublic       Boolean  @default(true)
+
   ideas    Idea[]
   tags     Tag[]
   projects Project[]
+  vestiges Vestige[]
 }
 
 // ─── Idea ─────────────────────────────────────────────────────────────────────
@@ -32,6 +42,7 @@ model Idea {
   status             IdeaStatus         @default(SEED)
   contentHash        String?
   verificationStatus VerificationStatus @default(UNVERIFIED)
+  publishedAt        DateTime?          // Set once on first transition to PUBLISHED
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -43,6 +54,7 @@ model Idea {
   linksTo            IdeaLink[]          @relation("LinkTo")
   projects           IdeaProject[]
   verificationEvents VerificationEvent[]
+  reactions          Reaction[]
 
   @@index([userId])
   @@index([status])
@@ -155,4 +167,32 @@ model VerificationEvent {
   idea   Idea   @relation(fields: [ideaId], references: [id], onDelete: Cascade)
 
   @@index([ideaId])
+}
+
+// ─── Reaction ─────────────────────────────────────────────────────────────────
+// Anonymous emoji reactions from Agora readers. No auth required to create.
+model Reaction {
+  id        String   @id @default(cuid())
+  ideaId    String
+  emoji     String   // e.g. "💡", "🔥", "🌱"
+  createdAt DateTime @default(now())
+
+  idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
+}
+
+// ─── Vestige ─────────────────────────────────────────────────────────────────
+// A private record of an idea that was deliberately reconsidered and removed.
+model Vestige {
+  id             String    @id @default(cuid())
+  title          String
+  reconsideredAt DateTime  @default(now())
+  reflection     String?
+  reflectionAt   DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

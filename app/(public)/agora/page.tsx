@@ -9,8 +9,10 @@ interface EncounteredIdea {
   id: string;
   title: string;
   body: unknown;
+  createdAt: string;
+  publishedAt: string | null;
   updatedAt: string;
-  user: { name: string | null };
+  user: { id: string; name: string | null };
   tags: { tag: { name: string; slug: string } }[];
 }
 
@@ -117,15 +119,30 @@ export default function AgoraEncounterPage() {
             )}
           </div>
 
-          {/* Attribution */}
-          <p className="text-sm text-ink-muted border-t border-parchment-dark pt-4">
-            By {idea.user.name ?? "Anonymous"} &middot;{" "}
-            {new Date(idea.updatedAt).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
+          {/* Attribution & Silence Metric */}
+          <div className="flex flex-col gap-1 text-sm text-ink-muted border-t border-parchment-dark pt-4 mb-8">
+            <p>
+              By{" "}
+              <Link href={`/profile/${idea.user.id}`} className="hover:text-ink transition-colors underline decoration-parchment-border underline-offset-4">
+                {idea.user.name ?? "Anonymous"}
+              </Link>
+              {" "}&middot;{" "}
+              {new Date(idea.updatedAt).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
+            {idea.publishedAt && (
+              <p className="italic text-xs">
+                Cultivated for {Math.max(1, Math.floor(
+                  Math.abs(new Date(idea.publishedAt).getTime() - new Date(idea.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+                ))} day{Math.max(1, Math.floor(
+                  Math.abs(new Date(idea.publishedAt).getTime() - new Date(idea.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+                )) !== 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
 
           {/* Actions */}
           <div className="mt-8 flex flex-col sm:flex-row gap-4 items-center">

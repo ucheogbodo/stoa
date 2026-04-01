@@ -1,0 +1,1 @@
+app/(public)/profile/[userId]/page.tsx(53,32): error TS2461: Type 'ReactNode' is not an array type.

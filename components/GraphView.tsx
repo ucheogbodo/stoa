@@ -52,8 +52,8 @@ export default function GraphView({ data }: GraphViewProps) {
     const height = container.clientHeight;
 
     // Dynamically import to avoid SSR issues with canvas-based library
-    import("react-force-graph-2d").then(({ default: ForceGraph2D }) => {
-      const { createRoot } = require("react-dom/client");
+    import("react-force-graph-2d").then(async ({ default: ForceGraph2D }) => {
+      const { createRoot } = await import("react-dom/client");
 
       const el = document.createElement("div");
       el.style.width = "100%";

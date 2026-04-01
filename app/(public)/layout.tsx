@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const metadata = {
   title: "Stoa — The Agora",
@@ -27,6 +28,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
           <Link href="/login" className="hover:text-ink transition-colors">
             Enter Garden
           </Link>
+          <ThemeToggle />
         </nav>
       </header>
 

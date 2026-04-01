@@ -13,8 +13,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { IdeaCard } from "@/components/IdeaCard";
+import { VestigeCard } from "@/components/VestigeCard";
 import { FilterBar } from "@/components/FilterBar";
-import { IdeaStatus } from "@prisma/client";
+import { IdeaStatus, Vestige } from "@prisma/client";
 
 interface PageProps {
   searchParams: {
@@ -52,11 +53,26 @@ export default async function GardenPage({ searchParams }: PageProps) {
     orderBy: { updatedAt: "desc" },
   });
 
+  // Fetch Vestiges only if no tag or status filters are applied
+  let vestiges: Vestige[] = [];
+  if (!statusFilter && !searchParams.tag) {
+    vestiges = await prisma.vestige.findMany({
+      where: { userId },
+      orderBy: { reconsideredAt: "desc" },
+    });
+  }
+
   // Fetch all tags for this user (for the filter dropdown)
   const tags = await prisma.tag.findMany({
     where: { userId },
     orderBy: { name: "asc" },
   });
+
+  // Combine items and sort chronologically (newest first)
+  const combinedItems = [
+    ...ideas.map((idea) => ({ type: "idea" as const, data: idea, date: idea.updatedAt })),
+    ...vestiges.map((vestige) => ({ type: "vestige" as const, data: vestige, date: vestige.reconsideredAt })),
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   return (
     <div>
@@ -79,7 +95,7 @@ export default async function GardenPage({ searchParams }: PageProps) {
       <FilterBar tags={tags} currentStatus={searchParams.status} currentTag={searchParams.tag} />
 
       {/* ── Ideas grid ───────────────────────────────────────────────────── */}
-      {ideas.length === 0 ? (
+      {combinedItems.length === 0 ? (
         <div className="mt-16 text-center">
           <p className="font-serif text-xl text-ink-muted">The garden is quiet.</p>
           <p className="mt-2 text-sm text-ink-muted">
@@ -91,9 +107,13 @@ export default async function GardenPage({ searchParams }: PageProps) {
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {ideas.map((idea) => (
-            <IdeaCard key={idea.id} idea={idea} />
-          ))}
+          {combinedItems.map((item) =>
+            item.type === "idea" ? (
+              <IdeaCard key={`idea-${item.data.id}`} idea={item.data} />
+            ) : (
+              <VestigeCard key={`vestige-${item.data.id}`} vestige={item.data} />
+            )
+          )}
         </div>
       )}
     </div>
