@@ -35,7 +35,13 @@ Stoa rejects the engagement-maximising logic of a social media platform. There a
 - **Tags** — Create and assign tags to filter and categorise ideas.
 - **Idea Linking** — Connect ideas to each other, building a bidirectional knowledge graph.
 - **Project Workbenches** — Group ideas into named Projects and attach reference files (PDFs, images, documents) to each project workbench.
-- **Knowledge Graph** — Full-screen interactive force-directed graph (`/garden/graph`) visualising every idea as a node and every link as an edge, colour-coded by status.
+- **Knowledge Graph** — Full-screen interactive force-directed graph (`/garden/graph`) visualising every idea as a node and every link as an edge, colour-coded by status. Includes "Ghost Nodes" (Vestiges) for visualising intellectual history and reconsidered thoughts.
+
+### Philosopher Profile
+- **Scholarly Identity** — A personal, non-performative profile encompassing an Inscription, Epigraph, Epistemic Stance, and Intellectual Lineage.
+- **Inquiry Timeline & Seasons** — Track the growth of your garden through intellectual seasons and list Unresolved Questions.
+- **Public Profile View** — Share your intellectual journey securely with the outside world, or keep it perfectly private.
+- **Silence Metric** — Honors the virtue of deliberation by displaying a visual metric of time spent cultivating an idea before publishing.
 
 ### The Verification System
 - **Content Fingerprinting** — Every saved idea generates a SHA-256 hash of its body text as a tamper-proof authorship timestamp.
@@ -47,6 +53,7 @@ Stoa rejects the engagement-maximising logic of a social media platform. There a
 - **The Encounter** — `/agora` shows one random published, verified idea at a time. Clicking *"Encounter Another"* fetches the next without a page reload.
 - **Browse Archive** — `/agora/browse` lists all published ideas chronologically with no ranking signals whatsoever.
 - **Read-Only Idea View** — `/idea/[id]` renders a single published idea cleanly for any reader.
+- **Public Discussions** — `/agora/discussions` allows readers to engage in public threads seeded from Unresolved Questions or opened freely.
 
 ### Authentication
 - Credentials-based login via **NextAuth** (bcrypt-hashed passwords).
@@ -210,6 +217,8 @@ The schema is managed by Prisma. Key models:
 | `Project` / `IdeaProject` | Project workbenches and idea membership |
 | `ProjectFile` | Reference files attached to project workbenches |
 | `VerificationEvent` | Audit trail for all originality checks |
+| `Vestige` | Private record of deliberately reconsidered ideas (Ghost Nodes) |
+| `Discussion` / `DiscussionPost` | Public philosophical threads and replies |
 
 After any schema change, run:
 
@@ -240,11 +249,13 @@ npx prisma db push
 | `/garden` | Idea dashboard — filter, sort, and browse all ideas |
 | `/garden/ideas/new` | Create a new idea |
 | `/garden/ideas/[id]` | Edit an existing idea |
-| `/garden/graph` | Interactive knowledge graph |
+| `/garden/graph` | Interactive knowledge graph (includes Vestiges) |
 | `/garden/projects` | Project dashboard |
 | `/garden/projects/new` | Create a new project |
 | `/garden/projects/[id]` | Project workbench (linked ideas + files) |
 | `/garden/admin/flagged` | Admin review panel for flagged ideas |
+| `/garden/settings` | Philosopher profile and account settings |
+| `/garden/vestibule` | Review and manage reconsidered ideas (Vestiges) |
 
 ### Public (no authentication required)
 
@@ -253,7 +264,9 @@ npx prisma db push
 | `/` | Public landing page |
 | `/agora` | The Encounter — one random published idea |
 | `/agora/browse` | Chronological archive of all published ideas |
+| `/agora/discussions` | Public discussion threads |
 | `/idea/[id]` | Read-only view of a single published idea |
+| `/profile/[id]` | Public view of a Philosopher's profile |
 | `/login` | Login page |
 | `/api/seed` | One-time admin user seed endpoint |
 
