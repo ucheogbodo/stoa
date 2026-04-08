@@ -234,12 +234,12 @@ export default async function PublicProfilePage({ params }: { params: { userId: 
             {questions.map((q, i) => (
               <li key={i}>
                 <Link
-                  href={`/garden/ideas/new?prompt=${encodeURIComponent(q)}`}
+                  href={`/agora/discussions/new?prompt=${encodeURIComponent(q)}`}
                   className="text-sm text-ink hover:text-sage transition-colors leading-relaxed group"
                 >
                   <span className="text-ink-muted mr-3 font-mono text-xs">{String(i + 1).padStart(2, "0")}</span>
                   {q}
-                  <span className="text-ink-muted text-xs ml-2 opacity-0 group-hover:opacity-100 transition-opacity">→ think alongside</span>
+                  <span className="text-ink-muted text-xs ml-2 opacity-0 group-hover:opacity-100 transition-opacity">→ open a thread</span>
                 </Link>
               </li>
             ))}

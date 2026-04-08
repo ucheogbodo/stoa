@@ -32,6 +32,7 @@ model User {
   tags     Tag[]
   projects Project[]
   vestiges Vestige[]
+  discussionPosts DiscussionPost[]
 }
 
 // ─── Idea ─────────────────────────────────────────────────────────────────────
@@ -194,5 +195,36 @@ model Vestige {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+}
+
+// ─── Discussion ───────────────────────────────────────────────────────────────
+// A public thread seeded from an Unresolved Question or opened freely.
+// Only authenticated users can post; anyone can read.
+model Discussion {
+  id        String   @id @default(cuid())
+  prompt    String   // The opening question or proposition
+  sourceUrl String?  // Optional: URL of the originating idea or profile
+  createdAt DateTime @default(now())
+
+  posts DiscussionPost[]
+
+  @@index([createdAt])
+}
+
+// ─── DiscussionPost ───────────────────────────────────────────────────────────
+// An individual reply in a Discussion thread. Author is always a User.
+model DiscussionPost {
+  id           String   @id @default(cuid())
+  body         String   // Plain text, max ~2000 chars
+  createdAt    DateTime @default(now())
+
+  discussionId String
+  discussion   Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([discussionId])
   @@index([userId])
 }

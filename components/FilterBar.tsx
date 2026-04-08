@@ -1,11 +1,5 @@
 // components/FilterBar.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Filter controls for the Garden dashboard.
-// Uses URL search parameters so the current filter is reflected in the URL
-// and the browser back button works correctly.
-// This is a CLIENT component because it needs to read + update the URL.
-// ─────────────────────────────────────────────────────────────────────────────
-
+// Pill-based filter controls for the Garden dashboard.
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -18,10 +12,9 @@ interface FilterBarProps {
 }
 
 const statusOptions = [
-  { value: "", label: "All statuses" },
-  { value: IdeaStatus.SEED, label: "Seed" },
-  { value: IdeaStatus.GROWING, label: "Growing" },
-  { value: IdeaStatus.PUBLISHED, label: "Published" },
+  { value: IdeaStatus.SEED,      label: "🌱 Seeds" },
+  { value: IdeaStatus.GROWING,   label: "🌿 Growing" },
+  { value: IdeaStatus.PUBLISHED, label: "📖 Published" },
 ];
 
 export function FilterBar({ tags, currentStatus, currentTag }: FilterBarProps) {
@@ -30,57 +23,65 @@ export function FilterBar({ tags, currentStatus, currentTag }: FilterBarProps) {
   const searchParams = useSearchParams();
 
   function updateFilter(key: string, value: string) {
-    // Create a new URLSearchParams object from the current params
     const params = new URLSearchParams(searchParams.toString());
-
-    if (value) {
-      params.set(key, value);
-    } else {
-      params.delete(key);
-    }
-
-    // Navigate to the updated URL (no full page reload — Next.js soft navigation)
+    if (value) { params.set(key, value); } else { params.delete(key); }
     router.push(`${pathname}?${params.toString()}`);
   }
 
+  function clearAll() { router.push(pathname); }
+
+  const hasFilters = !!(currentStatus || currentTag);
+
   return (
-    <div className="flex flex-wrap gap-3 items-center">
-      {/* Status filter */}
-      <select
-        value={currentStatus ?? ""}
-        onChange={(e) => updateFilter("status", e.target.value)}
-        className="input !w-auto text-sm py-1.5"
-        aria-label="Filter by status"
-      >
-        {statusOptions.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+    <div className="flex flex-wrap gap-2 items-center">
+      {/* Status pills */}
+      {statusOptions.map((opt) => {
+        const active = currentStatus === opt.value;
+        return (
+          <button
+            key={opt.value}
+            onClick={() => updateFilter("status", active ? "" : opt.value)}
+            className={`text-xs px-3.5 py-1.5 rounded-full font-medium transition-all duration-150 ${
+              active
+                ? "bg-ink text-parchment"
+                : "bg-parchment-dark text-ink-muted hover:bg-parchment-border hover:text-ink"
+            }`}
+          >
             {opt.label}
-          </option>
-        ))}
-      </select>
+          </button>
+        );
+      })}
 
-      {/* Tag filter */}
-      <select
-        value={currentTag ?? ""}
-        onChange={(e) => updateFilter("tag", e.target.value)}
-        className="input !w-auto text-sm py-1.5"
-        aria-label="Filter by tag"
-      >
-        <option value="">All tags</option>
-        {tags.map((tag) => (
-          <option key={tag.id} value={tag.slug}>
+      {/* Divider — only if we also have tags */}
+      {tags.length > 0 && (
+        <span className="w-px h-4 bg-parchment-border mx-1 hidden sm:block" />
+      )}
+
+      {/* Tag pills */}
+      {tags.map((tag) => {
+        const active = currentTag === tag.slug;
+        return (
+          <button
+            key={tag.id}
+            onClick={() => updateFilter("tag", active ? "" : tag.slug)}
+            className={`text-xs px-3.5 py-1.5 rounded-full font-medium transition-all duration-150 ${
+              active
+                ? "bg-sage text-white"
+                : "bg-parchment-dark text-ink-muted hover:bg-sage/15 hover:text-sage"
+            }`}
+          >
             {tag.name}
-          </option>
-        ))}
-      </select>
+          </button>
+        );
+      })}
 
-      {/* Clear filters — only shown when filters are active */}
-      {(currentStatus || currentTag) && (
+      {/* Clear */}
+      {hasFilters && (
         <button
-          onClick={() => router.push(pathname)}
-          className="text-sm text-ink-muted hover:text-rust transition-colors"
+          onClick={clearAll}
+          className="text-xs text-ink-muted/60 hover:text-rust transition-colors ml-1"
         >
-          Clear filters
+          Clear
         </button>
       )}
     </div>

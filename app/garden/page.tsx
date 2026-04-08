@@ -1,12 +1,5 @@
 // app/garden/page.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Garden dashboard — the main view of all your ideas.
-// This is a SERVER component: it fetches ideas directly from the database
-// using Prisma, with no extra API round-trip needed.
-//
-// Filtering by tag and status uses URL search parameters so filters are
-// shareable/bookmarkable and work without client-side state.
-// ─────────────────────────────────────────────────────────────────────────────
+// Garden dashboard — overview of all ideas and vestiges.
 
 import Link from "next/link";
 import { getServerSession } from "next-auth";
@@ -18,42 +11,29 @@ import { FilterBar } from "@/components/FilterBar";
 import { IdeaStatus, Vestige } from "@prisma/client";
 
 interface PageProps {
-  searchParams: {
-    status?: string;
-    tag?: string;
-  };
+  searchParams: { status?: string; tag?: string };
 }
 
 export default async function GardenPage({ searchParams }: PageProps) {
-  // Get the current user's session (guaranteed to exist — middleware protects this route)
   const session = await getServerSession(authOptions);
   const userId = (session!.user as { id: string }).id;
+  const userName = session?.user?.name?.split(" ")[0] ?? "Gardener";
 
-  // Build Prisma filter conditions from URL search params
   const statusFilter =
-    searchParams.status &&
-    Object.values(IdeaStatus).includes(searchParams.status as IdeaStatus)
+    searchParams.status && Object.values(IdeaStatus).includes(searchParams.status as IdeaStatus)
       ? (searchParams.status as IdeaStatus)
       : undefined;
 
-  // Fetch all ideas for this user, with their tags
   const ideas = await prisma.idea.findMany({
     where: {
       userId,
       ...(statusFilter ? { status: statusFilter } : {}),
-      ...(searchParams.tag
-        ? { tags: { some: { tag: { slug: searchParams.tag } } } }
-        : {}),
+      ...(searchParams.tag ? { tags: { some: { tag: { slug: searchParams.tag } } } } : {}),
     },
-    include: {
-      tags: {
-        include: { tag: true },
-      },
-    },
+    include: { tags: { include: { tag: true } } },
     orderBy: { updatedAt: "desc" },
   });
 
-  // Fetch Vestiges only if no tag or status filters are applied
   let vestiges: Vestige[] = [];
   if (!statusFilter && !searchParams.tag) {
     vestiges = await prisma.vestige.findMany({
@@ -62,51 +42,64 @@ export default async function GardenPage({ searchParams }: PageProps) {
     });
   }
 
-  // Fetch all tags for this user (for the filter dropdown)
-  const tags = await prisma.tag.findMany({
-    where: { userId },
-    orderBy: { name: "asc" },
-  });
+  const tags = await prisma.tag.findMany({ where: { userId }, orderBy: { name: "asc" } });
 
-  // Combine items and sort chronologically (newest first)
   const combinedItems = [
     ...ideas.map((idea) => ({ type: "idea" as const, data: idea, date: idea.updatedAt })),
-    ...vestiges.map((vestige) => ({ type: "vestige" as const, data: vestige, date: vestige.reconsideredAt })),
+    ...vestiges.map((v) => ({ type: "vestige" as const, data: v, date: v.reconsideredAt })),
   ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+  const isFiltered = !!(statusFilter || searchParams.tag);
 
   return (
     <div>
-      {/* ── Page header ──────────────────────────────────────────────────── */}
+      {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="font-serif text-3xl text-ink">The Garden</h1>
-          <p className="mt-1 text-ink-muted text-sm">
+          <p className="label-overline mb-1">Your Space</p>
+          <h1 className="font-serif text-3xl text-ink">
+            {isFiltered ? "The Garden" : `Good ${getTimeOfDay()}, ${userName}`}
+          </h1>
+          <p className="mt-1 text-sm text-ink-muted">
             {ideas.length} {ideas.length === 1 ? "idea" : "ideas"} growing
+            {vestiges.length > 0 && !isFiltered && (
+              <> · <Link href="/garden/vestibule" className="hover:text-ink underline underline-offset-4 decoration-parchment-border">{vestiges.length} reconsidered</Link></>
+            )}
           </p>
         </div>
-
-        {/* New Idea button */}
         <Link href="/garden/ideas/new" className="btn-primary">
           + New Idea
         </Link>
       </div>
 
-      {/* ── Filters ──────────────────────────────────────────────────────── */}
-      <FilterBar tags={tags} currentStatus={searchParams.status} currentTag={searchParams.tag} />
+      {/* Filters */}
+      <div className="mb-8">
+        <FilterBar tags={tags} currentStatus={searchParams.status} currentTag={searchParams.tag} />
+      </div>
 
-      {/* ── Ideas grid ───────────────────────────────────────────────────── */}
+      {/* Ideas grid */}
       {combinedItems.length === 0 ? (
-        <div className="mt-16 text-center">
-          <p className="font-serif text-xl text-ink-muted">The garden is quiet.</p>
-          <p className="mt-2 text-sm text-ink-muted">
-            Plant your first idea — every essay begins as a seed.
+        <div className="mt-20 text-center">
+          <p className="font-serif text-2xl text-ink-muted mb-3">
+            {isFiltered ? "Nothing matches this filter." : "The garden is quiet."}
           </p>
-          <Link href="/garden/ideas/new" className="btn-primary mt-6 inline-flex">
-            Plant a seed
-          </Link>
+          <p className="text-sm text-ink-muted/60 mb-8">
+            {isFiltered
+              ? "Try clearing the filter to see all ideas."
+              : "Every essay begins as a seed. Plant your first."}
+          </p>
+          {isFiltered ? (
+            <Link href="/garden" className="btn-ghost">
+              Clear filters
+            </Link>
+          ) : (
+            <Link href="/garden/ideas/new" className="btn-primary">
+              Plant a seed
+            </Link>
+          )}
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {combinedItems.map((item) =>
             item.type === "idea" ? (
               <IdeaCard key={`idea-${item.data.id}`} idea={item.data} />
@@ -118,4 +111,11 @@ export default async function GardenPage({ searchParams }: PageProps) {
       )}
     </div>
   );
+}
+
+function getTimeOfDay(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "morning";
+  if (h < 17) return "afternoon";
+  return "evening";
 }

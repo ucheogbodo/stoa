@@ -1,6 +1,6 @@
 /* app/globals.css */
 /* ─────────────────────────────────────────────────────────────────────────── */
-/* Global styles and Tailwind directives                                        */
+/* Global styles — Stoa design system                                           */
 /* ─────────────────────────────────────────────────────────────────────────── */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
@@ -9,7 +9,41 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Base resets and defaults ─────────────────────────────────────────────── */
+/* ── CSS Custom Properties ────────────────────────────────────────────────── */
+/* Values are space-separated RGB triplets (no #, no rgb()).                    */
+/* Tailwind reads them as: rgb(var(--color-*) / <alpha-value>)                 */
+/* The default theme is the warm parchment/dark-ink palette.                   */
+:root {
+  --color-parchment:        245 240 232;   /* #f5f0e8 — warm off-white */
+  --color-parchment-dark:   237 230 214;   /* #ede6d6 — slightly deeper */
+  --color-parchment-border: 217 208 188;   /* #d9d0bc — border */
+  --color-ink:              26  26  46;    /* #1a1a2e — deep navy-black */
+  --color-ink-light:        45  45  68;    /* #2d2d44 — lighter ink */
+  --color-ink-muted:        107 107 138;   /* #6b6b8a — muted */
+  --color-sage:             122 158 126;   /* #7a9e7e — seed green */
+  --color-sage-light:       232 240 233;   /* #e8f0e9 — sage tint */
+  --color-amber:            201 146 58;    /* #c9923a — growing amber */
+  --color-amber-light:      253 243 227;   /* #fdf3e3 — amber tint */
+  --color-rust:             184 92  56;    /* #b85c38 — published rust */
+  --color-rust-light:       251 238 232;   /* #fbeee8 — rust tint */
+
+  /* Surface — used for cards, nav panels. Distinct from bg in light mode. */
+  --color-surface: 255 255 255;            /* #ffffff */
+}
+
+/* ── Light mode overrides ─────────────────────────────────────────────────── */
+/* Only the RGB triplets change. All Tailwind classes cascade automatically.   */
+[data-theme="light"] {
+  --color-parchment:        255 255 255;   /* #ffffff */
+  --color-parchment-dark:   243 244 246;   /* #f3f4f6 */
+  --color-parchment-border: 229 231 235;   /* #e5e7eb */
+  --color-ink:              17  24  39;    /* #111827 */
+  --color-ink-light:        31  41  55;    /* #1f2937 */
+  --color-ink-muted:        107 114 128;   /* #6b7280 */
+  --color-surface:          249 250 251;   /* #f9fafb — cards slightly off-white */
+}
+
+/* ── Base resets ──────────────────────────────────────────────────────────── */
 @layer base {
   html {
     @apply scroll-smooth;
@@ -19,148 +53,118 @@
     @apply bg-parchment text-ink font-sans antialiased;
   }
 
-  /* Headings use the serif font */
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif;
   }
 
-  /* Subtle focus ring for accessibility */
   *:focus-visible {
-    @apply outline-2 outline-offset-2 outline-rust;
+    @apply outline-none ring-2 ring-sage ring-offset-2 ring-offset-parchment;
   }
 }
 
-/* ── Reusable component styles ───────────────────────────────────────────── */
+/* ── Component layer ─────────────────────────────────────────────────────── */
 @layer components {
 
-  /* Status badge variants – applied via JS based on Idea.status */
+  /* ── Status badges ─────────────────────────────────────────────────────── */
   .badge-seed {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-           bg-sage-light text-sage;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+           bg-sage-light text-sage tracking-wide;
   }
   .badge-growing {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-           bg-amber-light text-amber;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+           bg-amber-light text-amber tracking-wide;
   }
   .badge-published {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-           bg-rust-light text-rust;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+           bg-rust-light text-rust tracking-wide;
   }
 
-  /* Primary button */
+  /* ── Buttons ───────────────────────────────────────────────────────────── */
   .btn-primary {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded
-           bg-ink text-parchment text-sm font-medium
-           hover:bg-ink-light transition-colors duration-150
-           disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-full
+           bg-ink text-parchment text-sm font-medium tracking-wide
+           hover:bg-ink-light active:scale-[0.98]
+           transition-all duration-150
+           disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100;
   }
 
-  /* Ghost / secondary button */
   .btn-ghost {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full
            border border-parchment-border text-ink text-sm font-medium
-           hover:bg-parchment-dark transition-colors duration-150;
+           hover:bg-parchment-dark hover:border-ink-muted/30
+           active:scale-[0.98] transition-all duration-150;
   }
 
-  /* Text input */
+  /* ── Inputs ────────────────────────────────────────────────────────────── */
   .input {
-    @apply w-full px-3 py-2 rounded border border-parchment-border
-           bg-white text-ink placeholder-ink-muted text-sm
-           focus:outline-none focus:ring-1 focus:ring-ink
-           transition-shadow duration-150;
+    @apply w-full px-3.5 py-2.5 rounded-xl border border-parchment-border
+           bg-parchment text-ink placeholder-ink-muted/60 text-sm
+           focus:outline-none focus:ring-2 focus:ring-sage/40 focus:border-sage/50
+           transition-all duration-150;
   }
 
-  /* Card */
+  /* ── Cards ─────────────────────────────────────────────────────────────── */
+  /* bg-[rgb(var(--color-surface))] reads the surface variable directly. */
   .card {
-    @apply bg-white rounded border border-parchment-border
-           hover:border-ink-muted transition-colors duration-150;
+    background-color: rgb(var(--color-surface));
+    @apply rounded-2xl border border-parchment-border/80
+           shadow-[0_1px_3px_0_rgb(0_0_0/0.04),0_1px_2px_-1px_rgb(0_0_0/0.04)]
+           hover:shadow-[0_4px_12px_0_rgb(0_0_0/0.08),0_2px_4px_-1px_rgb(0_0_0/0.04)]
+           hover:border-parchment-border
+           transition-all duration-200;
+  }
+
+  .card-muted {
+    @apply bg-parchment-dark/40 rounded-2xl border border-parchment-border/60
+           shadow-[0_1px_2px_0_rgb(0_0_0/0.03)]
+           transition-all duration-200;
+  }
+
+  /* ── Utilities ─────────────────────────────────────────────────────────── */
+  .label-overline {
+    @apply text-xs font-medium text-ink-muted uppercase tracking-widest;
+  }
+
+  .divider {
+    @apply border-t border-parchment-border/80;
   }
 }
 
-/* ── Tiptap editor content styles ───────────────────────────────────────── */
-/* These styles are applied to the contenteditable div rendered by Tiptap.  */
+/* ── Tiptap editor ───────────────────────────────────────────────────────── */
 .ProseMirror {
   @apply outline-none min-h-[200px];
 }
-
 .ProseMirror p {
-  @apply leading-relaxed mb-3;
+  @apply leading-relaxed mb-4 text-[15px];
 }
-
 .ProseMirror h1 {
-  @apply font-serif text-2xl font-semibold mt-6 mb-3 text-ink;
+  @apply font-serif text-2xl font-semibold mt-8 mb-3 text-ink;
 }
-
 .ProseMirror h2 {
-  @apply font-serif text-xl font-semibold mt-5 mb-2 text-ink;
+  @apply font-serif text-xl font-semibold mt-6 mb-2 text-ink;
 }
-
 .ProseMirror h3 {
-  @apply font-serif text-lg font-medium mt-4 mb-2 text-ink;
+  @apply font-serif text-lg font-medium mt-5 mb-2 text-ink;
 }
-
 .ProseMirror ul {
-  @apply list-disc list-inside mb-3 space-y-1;
+  @apply list-disc list-inside mb-4 space-y-1.5 text-[15px];
 }
-
 .ProseMirror ol {
-  @apply list-decimal list-inside mb-3 space-y-1;
+  @apply list-decimal list-inside mb-4 space-y-1.5 text-[15px];
 }
-
 .ProseMirror blockquote {
-  @apply border-l-4 border-parchment-border pl-4 italic text-ink-muted my-4;
+  @apply border-l-2 border-sage/40 pl-5 italic text-ink-muted my-6;
 }
-
 .ProseMirror code {
-  @apply font-mono text-sm bg-parchment-dark px-1.5 py-0.5 rounded;
+  @apply font-mono text-sm bg-parchment-dark px-1.5 py-0.5 rounded-md;
 }
-
 .ProseMirror pre {
-  @apply bg-parchment-dark rounded p-4 overflow-x-auto my-4;
+  @apply bg-parchment-dark rounded-xl p-5 overflow-x-auto my-5;
 }
-
 .ProseMirror pre code {
   @apply bg-transparent p-0;
 }
-
-/* Placeholder text when editor is empty */
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  @apply text-ink-muted float-left h-0 pointer-events-none;
+  @apply text-ink-muted/50 float-left h-0 pointer-events-none;
 }
-
-/* ── Dark mode (default — the existing parchment theme is already warm/dark enough) */
-/* No overrides needed for default; we add a true light mode below.             */
-
-/* ── Light mode overrides ─────────────────────────────────────────────────── */
-/* Applied when <html data-theme="light"> is set by ThemeToggle.tsx            */
-[data-theme="light"] {
-  --color-parchment: #ffffff;
-  --color-parchment-dark: #f3f4f6;
-  --color-parchment-border: #e5e7eb;
-  --color-ink: #111827;
-  --color-ink-light: #1f2937;
-  --color-ink-muted: #6b7280;
-}
-
-[data-theme="light"] body {
-  background-color: #ffffff;
-  color: #111827;
-}
-
-[data-theme="light"] nav,
-[data-theme="light"] header {
-  background-color: rgba(255, 255, 255, 0.85) !important;
-  border-color: #e5e7eb !important;
-}
-
-[data-theme="light"] .card,
-[data-theme="light"] .input {
-  background-color: #f9fafb;
-  border-color: #e5e7eb;
-}
-
-[data-theme="light"] .ProseMirror {
-  color: #111827;
-}
-

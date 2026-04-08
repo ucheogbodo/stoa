@@ -1,5 +1,5 @@
 // app/api/graph/route.ts
-// GET /api/graph — returns all ideas + links for the Knowledge Graph visualisation.
+// GET /api/graph — returns ideas, projects, and all link types for the Knowledge Graph.
 
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -12,21 +12,84 @@ export async function GET() {
 
   const userId = (session.user as { id: string }).id;
 
-  const [ideas, links] = await Promise.all([
+  const [ideas, ideaLinks, projects, ideaProjects, vestiges] = await Promise.all([
+    // Ideas with their tags for cluster halos
     prisma.idea.findMany({
       where: { userId },
-      select: { id: true, title: true, status: true },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        tags: {
+          select: { tag: { select: { name: true, slug: true } } },
+        },
+      },
     }),
+    // Idea-to-idea links
     prisma.ideaLink.findMany({
       where: { fromIdea: { userId } },
       select: { fromIdeaId: true, toIdeaId: true },
     }),
+    // Projects
+    prisma.project.findMany({
+      where: { userId },
+      select: { id: true, name: true },
+    }),
+    // Idea-to-project links
+    prisma.ideaProject.findMany({
+      where: { idea: { userId } },
+      select: { ideaId: true, projectId: true },
+    }),
+    // Reconsidered ideas (vestiges) — ghost nodes, no links
+    prisma.vestige.findMany({
+      where: {
+        userId,
+        NOT: { title: "" },   // skip truly empty/accidental vestiges
+      },
+      select: { id: true, title: true, reconsideredAt: true },
+    }),
   ]);
 
-  type IdeaRow = (typeof ideas)[number];
-  type LinkRow = (typeof links)[number];
-  return NextResponse.json({
-    nodes: ideas.map((idea: IdeaRow) => ({ id: idea.id, label: idea.title, status: idea.status })),
-    links: links.map((l: LinkRow) => ({ source: l.fromIdeaId, target: l.toIdeaId })),
-  });
+  const nodes = [
+    ...ideas.map((idea) => ({
+      id: idea.id,
+      label: idea.title || "Untitled",
+      type: "idea" as const,
+      status: idea.status,
+      tags: idea.tags.map((t) => t.tag.slug),
+      tagNames: idea.tags.map((t) => t.tag.name),
+    })),
+    ...projects.map((project) => ({
+      id: project.id,
+      label: project.name,
+      type: "project" as const,
+      status: undefined,
+      tags: [] as string[],
+      tagNames: [] as string[],
+    })),
+    ...vestiges.map((v) => ({
+      id:       `vestige-${v.id}`,
+      label:    v.title,
+      type:     "vestige" as const,
+      status:   undefined,
+      tags:     [] as string[],
+      tagNames: [] as string[],
+      reconsideredAt: v.reconsideredAt,
+    })),
+  ];
+
+  const links = [
+    ...ideaLinks.map((l) => ({
+      source: l.fromIdeaId,
+      target: l.toIdeaId,
+      type: "idea-idea" as const,
+    })),
+    ...ideaProjects.map((l) => ({
+      source: l.ideaId,
+      target: l.projectId,
+      type: "idea-project" as const,
+    })),
+  ];
+
+  return NextResponse.json({ nodes, links });
 }

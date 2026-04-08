@@ -46,6 +46,10 @@ export default function IdeaEditorPage() {
   const [ideaId, setIdeaId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [loading, setLoading] = useState(!isNew);
+  // `loaded` guards auto-save: for existing ideas, we must wait for the fetch
+  // to complete before auto-save is allowed. Without this, the debounce fires
+  // ~1.5s after mount with empty state, creating a phantom blank idea.
+  const [loaded, setLoaded] = useState(isNew);
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>("UNVERIFIED");
   const [verifying, setVerifying] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -73,8 +77,9 @@ export default function IdeaEditorPage() {
         ]);
         setIdeaProjectIds(data.projects?.map((p: { projectId: string }) => p.projectId) ?? []);
         setLoading(false);
+        setLoaded(true);
       })
-      .catch(() => setLoading(false));
+      .catch(() => { setLoading(false); setLoaded(true); });
   }, [isNew, params.id]);
 
   // ── Load projects (for the sidebar panel) ──────────────────────────────────
@@ -131,11 +136,12 @@ export default function IdeaEditorPage() {
 
   // ── Debounced auto-save (1.5s after last change) ───────────────────────────
   useEffect(() => {
-    if (isNew && !ideaId) return; // Don't auto-save before first manual save (needs a title)
+    if (!loaded) return; // Don't fire before existing idea state has been fetched
+    if (isNew && !ideaId) return; // Don't auto-save new ideas before first manual save
     clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => { saveRef.current?.(); }, 1500);
     return () => clearTimeout(autoSaveTimer.current);
-  }, [title, body, status, tags, linkedIdeas, isNew, ideaId]);
+  }, [title, body, status, tags, linkedIdeas, isNew, ideaId, loaded]);
 
   // ── Verification: run when status changes to PUBLISHED ────────────────────
   useEffect(() => {

@@ -1,3 +1,5 @@
+// components/VestigeCard.tsx
+// Archived idea card — muted, archival in feel, expandable for reflection.
 "use client";
 
 import { useState } from "react";
@@ -18,10 +20,9 @@ export function VestigeCard({ vestige }: VestigeCardProps) {
   const MS_IN_DAY = 1000 * 60 * 60 * 24;
   const daysPassed = (Date.now() - new Date(vestige.reconsideredAt).getTime()) / MS_IN_DAY;
   const is30DaysPassed = daysPassed >= 30;
-  
+
   const hasReflection = !!vestige.reflection;
   const [isOpen, setIsOpen] = useState(!hasReflection && is30DaysPassed);
-  
   const [reflectionText, setReflectionText] = useState(vestige.reflection || "");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -39,45 +40,59 @@ export function VestigeCard({ vestige }: VestigeCardProps) {
   }
 
   function toggleOpen() {
-    if (hasReflection) {
-      setIsOpen(!isOpen);
-    }
+    if (hasReflection || is30DaysPassed) setIsOpen((prev) => !prev);
   }
 
   return (
-    <div 
-      className={`relative p-5 transition-colors border rounded-md border-ink-muted/10 bg-transparent ${hasReflection ? 'cursor-pointer hover:bg-parchment/50' : ''}`}
+    <div
+      className={`card-muted relative p-5 group/vestige ${
+        hasReflection || is30DaysPassed ? "cursor-pointer hover:bg-parchment/60" : ""
+      } transition-colors duration-200`}
       onClick={toggleOpen}
     >
-      <h2 className="font-serif text-[17px] text-ink-muted/80 font-normal leading-snug line-clamp-2">
+      {/* Archived indicator dot */}
+      <span className="inline-flex w-1.5 h-1.5 rounded-full bg-ink-muted/25 mb-3" />
+
+      <h2 className="font-serif text-base text-ink-muted/70 font-normal leading-snug line-clamp-2 mb-3">
         {vestige.title || <span className="italic">Untitled</span>}
       </h2>
-      
-      <div className="flex items-center mt-3 text-xs text-ink-muted/60 gap-2">
+
+      <div className="flex items-center gap-2 text-xs text-ink-muted/50">
         <span>
-          Reconsidered on{" "}
           {new Intl.DateTimeFormat("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
+            month: "short", day: "numeric", year: "numeric",
           }).format(new Date(vestige.reconsideredAt))}
         </span>
         {hasReflection && !isOpen && (
-          <span title="Contains reflection" className="w-[5px] h-[5px] rounded-full bg-ink-muted/40 inline-block"></span>
+          <span className="w-1 h-1 rounded-full bg-sage/50 inline-block" title="Has reflection" />
+        )}
+        {!is30DaysPassed && !hasReflection && (
+          <span className="text-ink-muted/40 italic">
+            reflection in {Math.ceil(30 - daysPassed)}d
+          </span>
         )}
       </div>
 
+      {/* Reflection editor */}
       {isOpen && is30DaysPassed && (
-        <div className="mt-4 border-t border-ink-muted/10 pt-3" onClick={e => e.stopPropagation()}>
+        <div
+          className="mt-4 pt-4 border-t border-parchment-border/60"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <p className="text-xs text-ink-muted/50 mb-2 uppercase tracking-widest">Reflection</p>
           <textarea
             value={reflectionText}
             onChange={(e) => setReflectionText(e.target.value)}
             onBlur={handleBlur}
             placeholder="What do you understand now that you didn't then?"
-            className="w-full bg-transparent text-sm text-ink-muted border-none outline-none resize-none placeholder:text-ink-muted/30 focus:ring-0"
+            className="w-full bg-transparent text-sm text-ink-muted border-none outline-none
+                       resize-none placeholder:text-ink-muted/30 focus:ring-0 leading-relaxed"
             rows={5}
             disabled={isSaving}
           />
+          {isSaving && (
+            <p className="text-xs text-ink-muted/40 mt-1">Saving…</p>
+          )}
         </div>
       )}
     </div>

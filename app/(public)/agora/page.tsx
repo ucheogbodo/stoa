@@ -2,7 +2,7 @@
 // The Agora Encounter — one random published idea, refreshed on demand.
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 
 interface EncounteredIdea {
@@ -39,11 +39,27 @@ export default function AgoraEncounterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [encounterCount, setEncounterCount] = useState(0);
+  const [gated, setGated] = useState(false);
+
+  // Read encounter count from localStorage on mount (client-side only)
+  useEffect(() => {
+    const stored = parseInt(localStorage.getItem("stoa_encounter_count") ?? "0", 10);
+    setEncounterCount(isNaN(stored) ? 0 : stored);
+  }, []);
 
   const fetchIdea = useCallback(async () => {
+    // Check gate: if they've already encountered 3 ideas, show the gate instead
+    const next = encounterCount + 1;
+    if (idea !== null && encounterCount >= 3) {
+      setGated(true);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setRevealed(false);
+    setGated(false);
 
     const res = await fetch("/api/agora/encounter");
     if (!res.ok) {
@@ -56,7 +72,11 @@ export default function AgoraEncounterPage() {
     setIdea(data);
     setLoading(false);
     setTimeout(() => setRevealed(true), 50);
-  }, []);
+
+    // Persist updated count
+    localStorage.setItem("stoa_encounter_count", String(next));
+    setEncounterCount(next);
+  }, [idea, encounterCount]);
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-16">
@@ -146,18 +166,43 @@ export default function AgoraEncounterPage() {
 
           {/* Actions */}
           <div className="mt-8 flex flex-col sm:flex-row gap-4 items-center">
-            <button
-              onClick={fetchIdea}
-              className="btn-primary w-full sm:w-auto justify-center"
-            >
-              Encounter Another &rarr;
-            </button>
-            <Link
-              href={`/idea/${idea.id}`}
-              className="text-sm text-ink-muted hover:text-sage transition-colors"
-            >
-              Read full idea
-            </Link>
+            {gated ? (
+              // Encounter Gate — soft prompt after 3 encounters
+              <div className="w-full border border-parchment-border rounded-lg p-6 text-center space-y-3 bg-parchment/50">
+                <p className="font-serif text-lg text-ink">
+                  You&rsquo;ve wandered the Agora a while.
+                </p>
+                <p className="text-sm text-ink-muted">
+                  Sign in to encounter more ideas, or browse the full archive.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+                  <Link href="/login" className="btn-primary text-center">
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/agora/browse"
+                    className="text-sm text-ink-muted hover:text-sage transition-colors py-2"
+                  >
+                    Browse the archive →
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={fetchIdea}
+                  className="btn-primary w-full sm:w-auto justify-center"
+                >
+                  Encounter Another &rarr;
+                </button>
+                <Link
+                  href={`/idea/${idea.id}`}
+                  className="text-sm text-ink-muted hover:text-sage transition-colors"
+                >
+                  Read full idea
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

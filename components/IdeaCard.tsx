@@ -1,7 +1,5 @@
 // components/IdeaCard.tsx
-// A card displaying a summary of one Idea in the garden grid.
-// Clicking the card navigates to the full editor for that idea.
-// A small trash button in the top-right allows deletion directly from the dashboard.
+// Garden idea card — elevated, clean, hover-lifted.
 "use client";
 
 import Link from "next/link";
@@ -15,34 +13,24 @@ interface IdeaCardProps {
     title: string;
     status: IdeaStatus;
     updatedAt: Date;
-    tags: {
-      tag: {
-        id: string;
-        name: string;
-        slug: string;
-      };
-    }[];
+    tags: { tag: { id: string; name: string; slug: string } }[];
   };
 }
 
-const statusBadgeClass: Record<IdeaStatus, string> = {
-  SEED: "badge-seed",
-  GROWING: "badge-growing",
-  PUBLISHED: "badge-published",
-};
-
-const statusLabel: Record<IdeaStatus, string> = {
-  SEED: "Seed",
-  GROWING: "Growing",
-  PUBLISHED: "Published",
+const statusConfig: Record<IdeaStatus, { badge: string; label: string; icon: string }> = {
+  SEED:      { badge: "badge-seed",      label: "Seed",      icon: "🌱" },
+  GROWING:   { badge: "badge-growing",   label: "Growing",   icon: "🌿" },
+  PUBLISHED: { badge: "badge-published", label: "Published", icon: "📖" },
 };
 
 export function IdeaCard({ idea }: IdeaCardProps) {
   const router = useRouter();
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
+  const cfg = statusConfig[idea.status];
+
   function handleInitiateDelete(e: React.MouseEvent) {
-    e.preventDefault(); 
+    e.preventDefault();
     e.stopPropagation();
     setIsConfirmingDelete(true);
   }
@@ -51,7 +39,7 @@ export function IdeaCard({ idea }: IdeaCardProps) {
     e.preventDefault();
     e.stopPropagation();
     await fetch(`/api/ideas/${idea.id}`, { method: "DELETE" });
-    router.refresh(); 
+    router.refresh();
   }
 
   async function handleReconsidered(e: React.MouseEvent) {
@@ -67,28 +55,27 @@ export function IdeaCard({ idea }: IdeaCardProps) {
 
   if (isConfirmingDelete) {
     return (
-      <div className="card relative p-5 flex flex-col justify-center items-center text-center space-y-4 min-h-[160px] bg-parchment bg-opacity-50">
-        <p className="font-serif text-[16px] text-ink text-balance leading-snug">
-          Are you setting this aside, or have you changed your mind?
+      <div className="card relative p-6 flex flex-col justify-center items-center text-center space-y-5 min-h-[160px]">
+        <p className="font-serif text-base text-ink leading-relaxed">
+          Are you setting this aside, or have you reconsidered?
         </p>
-        <div className="flex gap-5 mt-2">
+        <div className="flex gap-6">
           <button
             onClick={handleSetAside}
-            className="text-sm text-ink-muted hover:text-ink transition-colors pb-0.5 border-b border-transparent hover:border-ink-muted"
+            className="text-sm text-ink-muted hover:text-ink transition-colors underline underline-offset-4 decoration-parchment-border"
           >
             Set aside
           </button>
           <button
             onClick={handleReconsidered}
-            className="text-sm text-ink-muted hover:text-ink transition-colors pb-0.5 border-b border-transparent hover:border-ink-muted"
+            className="text-sm text-ink-muted hover:text-ink transition-colors underline underline-offset-4 decoration-parchment-border"
           >
             I&apos;ve reconsidered
           </button>
         </div>
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsConfirmingDelete(false); }}
-          className="absolute top-2 right-3 text-ink-muted hover:text-ink text-sm leading-none p-1"
-          title="Cancel"
+          className="absolute top-3 right-3 text-ink-muted/50 hover:text-ink-muted transition-colors p-1.5 rounded-lg hover:bg-parchment-dark"
           aria-label="Cancel"
         >
           ✕
@@ -98,36 +85,39 @@ export function IdeaCard({ idea }: IdeaCardProps) {
   }
 
   return (
-    <div className="card relative group/card">
-      {/* Delete button — visible on hover */}
+    <div className="card relative group/card overflow-hidden">
+      {/* Delete trigger — appears on hover */}
       <button
         type="button"
         onClick={handleInitiateDelete}
-        title="Delete idea"
-        className="absolute top-3 right-3 opacity-0 group-hover/card:opacity-100 transition-opacity text-ink-muted hover:text-rust text-sm leading-none p-1 rounded hover:bg-rust-light z-10"
-        aria-label="Delete idea"
+        title="Remove idea"
+        aria-label="Remove idea"
+        className="absolute top-3 right-3 opacity-0 group-hover/card:opacity-100 transition-all duration-200
+                   text-ink-muted/50 hover:text-rust text-xs leading-none p-1.5 rounded-lg
+                   hover:bg-rust-light z-10"
       >
-        🗑
+        ✕
       </button>
 
       <Link href={`/garden/ideas/${idea.id}`} className="block p-5">
         {/* Status badge */}
-        <span className={statusBadgeClass[idea.status]}>
-          {statusLabel[idea.status]}
+        <span className={cfg.badge}>
+          {cfg.icon} {cfg.label}
         </span>
 
         {/* Title */}
-        <h2 className="font-serif text-lg text-ink mt-3 leading-snug group-hover/card:text-ink-light transition-colors line-clamp-2">
-          {idea.title || <span className="italic text-ink-muted">Untitled</span>}
+        <h2 className="font-serif text-lg text-ink mt-3.5 mb-2 leading-snug line-clamp-2
+                        group-hover/card:text-sage transition-colors duration-200">
+          {idea.title || <span className="italic text-ink-muted/60">Untitled</span>}
         </h2>
 
         {/* Tags */}
         {idea.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
+          <div className="flex flex-wrap gap-1.5 mb-3">
             {idea.tags.map(({ tag }) => (
               <span
                 key={tag.id}
-                className="text-xs text-ink-muted bg-parchment-dark px-2 py-0.5 rounded"
+                className="text-xs text-ink-muted bg-parchment-dark px-2.5 py-0.5 rounded-full"
               >
                 {tag.name}
               </span>
@@ -135,13 +125,10 @@ export function IdeaCard({ idea }: IdeaCardProps) {
           </div>
         )}
 
-        {/* Last updated date */}
-        <p className="mt-4 text-xs text-ink-muted">
-          Updated{" "}
+        {/* Date */}
+        <p className="text-xs text-ink-muted/60 mt-auto pt-1">
           {new Intl.DateTimeFormat("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
+            month: "short", day: "numeric", year: "numeric",
           }).format(new Date(idea.updatedAt))}
         </p>
       </Link>

@@ -1,11 +1,8 @@
 // tailwind.config.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// Custom design tokens for Stoa.
-// The visual language draws from scholarly, editorial aesthetics:
-//   - Lora (serif) for idea titles and headings
-//   - Inter (sans-serif) for UI chrome and body text
-//   - A muted palette of ink, parchment, sage, and rust
-// ─────────────────────────────────────────────────────────────────────────────
+// Design tokens for Stoa — all color values use CSS custom properties
+// so that the data-theme="light" toggle cascades correctly through
+// every Tailwind utility class (bg-*, text-*, border-*, etc.).
+// The `<alpha-value>` placeholder allows opacity modifiers like bg-parchment/80.
 
 import type { Config } from "tailwindcss";
 
@@ -17,43 +14,43 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // ── Color Palette ──────────────────────────────────────────────────────
+      // ── Color Palette ────────────────────────────────────────────────────────
+      // Values reference CSS custom properties defined in :root (globals.css).
+      // This makes every utility class responsive to the data-theme switch.
       colors: {
         ink: {
-          DEFAULT: "#1a1a2e",  // deep navy-black — primary text
-          light: "#2d2d44",    // slightly lighter ink
-          muted: "#6b6b8a",    // muted ink — secondary text
+          DEFAULT: "rgb(var(--color-ink) / <alpha-value>)",
+          light:   "rgb(var(--color-ink-light) / <alpha-value>)",
+          muted:   "rgb(var(--color-ink-muted) / <alpha-value>)",
         },
         parchment: {
-          DEFAULT: "#f5f0e8",  // warm off-white — page background
-          dark: "#ede6d6",     // slightly darker — card backgrounds
-          border: "#d9d0bc",   // border color
+          DEFAULT: "rgb(var(--color-parchment) / <alpha-value>)",
+          dark:    "rgb(var(--color-parchment-dark) / <alpha-value>)",
+          border:  "rgb(var(--color-parchment-border) / <alpha-value>)",
         },
         sage: {
-          DEFAULT: "#7a9e7e",  // muted green — "seed" status
-          light: "#e8f0e9",    // very light sage — sage tint backgrounds
+          DEFAULT: "rgb(var(--color-sage) / <alpha-value>)",
+          light:   "rgb(var(--color-sage-light) / <alpha-value>)",
         },
         amber: {
-          DEFAULT: "#c9923a",  // warm amber — "growing" status
-          light: "#fdf3e3",    // amber tint backgrounds
+          DEFAULT: "rgb(var(--color-amber) / <alpha-value>)",
+          light:   "rgb(var(--color-amber-light) / <alpha-value>)",
         },
         rust: {
-          DEFAULT: "#b85c38",  // terracotta rust — "published" status / accents
-          light: "#fbeee8",    // rust tint backgrounds
+          DEFAULT: "rgb(var(--color-rust) / <alpha-value>)",
+          light:   "rgb(var(--color-rust-light) / <alpha-value>)",
         },
       },
 
-      // ── Typography ─────────────────────────────────────────────────────────
+      // ── Typography ──────────────────────────────────────────────────────────
       fontFamily: {
-        // Used for idea titles, section headings — gives a literary, editorial feel
         serif: ["Lora", "Georgia", "serif"],
-        // Used for UI elements, body copy, labels
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans:  ["Inter", "system-ui", "sans-serif"],
       },
 
-      // ── Spacing & Sizing ───────────────────────────────────────────────────
+      // ── Prose width ─────────────────────────────────────────────────────────
       maxWidth: {
-        prose: "68ch", // ideal reading width — used in the editor
+        prose: "68ch",
       },
     },
   },

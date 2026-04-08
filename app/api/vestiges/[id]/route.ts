@@ -50,3 +50,32 @@ export async function PATCH(
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = (session.user as { id: string }).id;
+
+  const vestige = await prisma.vestige.findUnique({ where: { id: params.id, userId } });
+  if (!vestige) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Only truly empty vestiges (no meaningful title, no reflection) may be discarded.
+  // A vestige with any content is a permanent philosophical record.
+  const hasTitle = vestige.title && vestige.title.trim().length > 0 && vestige.title.trim().toLowerCase() !== "untitled";
+  const hasReflection = vestige.reflection && vestige.reflection.trim().length > 0;
+
+  if (hasTitle || hasReflection) {
+    return NextResponse.json(
+      { error: "Only empty vestiges may be discarded. Meaningful records are permanent." },
+      { status: 403 }
+    );
+  }
+
+  await prisma.vestige.delete({ where: { id: params.id } });
+  return NextResponse.json({ deleted: true });
+}
