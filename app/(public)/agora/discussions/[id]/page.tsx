@@ -113,7 +113,7 @@ export default function DiscussionThreadPage() {
           <p className="mt-4 text-sm text-ink-muted">
             Seeded from{" "}
             <Link href={discussion.sourceUrl} className="underline underline-offset-4 decoration-parchment-border hover:text-ink transition-colors">
-              a philosopher's unresolved question
+              a philosopher&apos;s unresolved question
             </Link>
           </p>
         )}

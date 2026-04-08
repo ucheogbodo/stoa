@@ -21,7 +21,7 @@ function buildInviteUrl(token: string): string {
 }
 
 export default function AdminInvitesPage() {
-  const { data: session } = useSession();
+  useSession();
   const router = useRouter();
 
   const [tokens, setTokens] = useState<InviteToken[]>([]);

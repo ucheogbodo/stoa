@@ -4,13 +4,21 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 
+interface DiscussionItem {
+  id: string;
+  prompt: string;
+  createdAt: Date;
+  _count: { posts: number };
+  posts: { createdAt: Date }[];
+}
+
 export const metadata = {
   title: "The Discourse — Stoa Agora",
   description: "Open questions from the Garden. No votes. No ranking. Just thought.",
 };
 
 export default async function DiscussionsPage() {
-  const raw = await (prisma as any).discussion.findMany({
+  const raw = await prisma.discussion.findMany({
     orderBy: { createdAt: "desc" },
     include: {
       _count: { select: { posts: true } },
@@ -18,7 +26,7 @@ export default async function DiscussionsPage() {
     },
   });
 
-  const discussions = (raw as any[]).sort((a: any, b: any) => {
+  const discussions = raw.sort((a: DiscussionItem, b: DiscussionItem) => {
     const aDate = a.posts[0]?.createdAt ?? a.createdAt;
     const bDate = b.posts[0]?.createdAt ?? b.createdAt;
     return new Date(bDate).getTime() - new Date(aDate).getTime();
@@ -60,7 +68,7 @@ export default async function DiscussionsPage() {
         </div>
       ) : (
         <ul className="divide-y divide-parchment-border/60 mt-4">
-          {discussions.map((d: any) => {
+          {discussions.map((d: DiscussionItem) => {
             const lastActivity = d.posts[0]?.createdAt ?? d.createdAt;
             return (
               <li key={d.id}>
