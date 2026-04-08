@@ -93,3 +93,5 @@ export async function GET() {
 
   return NextResponse.json({ nodes, links });
 }
+
+export const dynamic = "force-dynamic";
