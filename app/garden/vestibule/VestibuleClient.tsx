@@ -18,10 +18,9 @@ interface Props {
   vestiges: Vestige[];
 }
 
-function isEmptyVestige(v: Vestige): boolean {
-  const hasTitle = v.title && v.title.trim().length > 0 && v.title.trim().toLowerCase() !== "untitled";
+function canDiscardVestige(v: Vestige): boolean {
   const hasReflection = v.reflection && v.reflection.trim().length > 0;
-  return !hasTitle && !hasReflection;
+  return !hasReflection;
 }
 
 export function VestibuleClient({ vestiges: initial }: Props) {
@@ -62,20 +61,20 @@ export function VestibuleClient({ vestiges: initial }: Props) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {vestiges.map((vestige) => {
-            const empty = isEmptyVestige(vestige);
+            const discardable = canDiscardVestige(vestige);
             return (
               <div key={vestige.id} className="relative">
                 <VestigeCard vestige={vestige} />
-                {/* Discard option — only shown for truly empty vestiges */}
-                {empty && (
+                {/* Discard option — shown for any vestige without a reflection */}
+                {discardable && (
                   <div className="mt-1 px-1">
                     <button
                       onClick={() => handleDiscard(vestige.id)}
                       disabled={discarding === vestige.id}
                       className="text-xs text-ink-muted/50 hover:text-rust transition-colors"
-                      title="This vestige is empty and may be discarded"
+                      title="Discard this vestige permanently"
                     >
-                      {discarding === vestige.id ? "Discarding…" : "Discard (empty)"}
+                      {discarding === vestige.id ? "Discarding…" : "Discard"}
                     </button>
                   </div>
                 )}

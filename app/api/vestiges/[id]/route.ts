@@ -64,14 +64,13 @@ export async function DELETE(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Only truly empty vestiges (no meaningful title, no reflection) may be discarded.
-  // A vestige with any content is a permanent philosophical record.
-  const hasTitle = vestige.title && vestige.title.trim().length > 0 && vestige.title.trim().toLowerCase() !== "untitled";
+  // Only vestiges without reflections may be discarded.
+  // A vestige with a written reflection is a permanent philosophical record.
   const hasReflection = vestige.reflection && vestige.reflection.trim().length > 0;
 
-  if (hasTitle || hasReflection) {
+  if (hasReflection) {
     return NextResponse.json(
-      { error: "Only empty vestiges may be discarded. Meaningful records are permanent." },
+      { error: "Only vestiges without reflections may be discarded. Meaningful records are permanent." },
       { status: 403 }
     );
   }

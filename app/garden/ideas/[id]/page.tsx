@@ -51,7 +51,7 @@ export default function IdeaEditorPage() {
   // ~1.5s after mount with empty state, creating a phantom blank idea.
   const [loaded, setLoaded] = useState(isNew);
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>("UNVERIFIED");
-  const [verifying, setVerifying] = useState(false);
+  const verifying = saveState === "saving" && status === "PUBLISHED";
   const [projects, setProjects] = useState<Project[]>([]);
   const [ideaProjectIds, setIdeaProjectIds] = useState<string[]>([]);
 
@@ -118,6 +118,8 @@ export default function IdeaEditorPage() {
       if (!res.ok) throw new Error("Save failed");
       const saved = await res.json();
 
+      setVerificationStatus(saved.verificationStatus ?? "UNVERIFIED");
+
       if (!ideaId) {
         setIdeaId(saved.id);
         router.replace(`/garden/ideas/${saved.id}`);
@@ -143,16 +145,7 @@ export default function IdeaEditorPage() {
     return () => clearTimeout(autoSaveTimer.current);
   }, [title, body, status, tags, linkedIdeas, isNew, ideaId, loaded]);
 
-  // ── Verification: run when status changes to PUBLISHED ────────────────────
-  useEffect(() => {
-    if (status !== "PUBLISHED" || !ideaId) return;
-    setVerifying(true);
-    fetch(`/api/ideas/${ideaId}/verify`, { method: "POST" })
-      .then((r) => r.json())
-      .then((data) => setVerificationStatus(data.verificationStatus ?? "UNVERIFIED"))
-      .catch(() => {})
-      .finally(() => setVerifying(false));
-  }, [status, ideaId]);
+
 
   // ── Keyboard shortcut ─────────────────────────────────────────────────────
   useEffect(() => {

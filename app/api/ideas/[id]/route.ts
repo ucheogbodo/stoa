@@ -10,6 +10,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { IdeaStatus } from "@prisma/client";
+import { hashContent, checkForDuplicates } from "@/lib/verification";
 
 // Helper: get the idea and verify ownership
 async function getOwnedIdea(id: string, userId: string) {
@@ -67,6 +68,34 @@ export async function PATCH(
       ? (status as IdeaStatus)
       : undefined;
 
+  // Verification logic: run if status changes to PUBLISHED or if body changes while PUBLISHED
+  let contentHash: string | null | undefined = undefined;
+  let verificationStatus: "VERIFIED" | "REVIEW" | undefined = undefined;
+  let shouldCreateEvent = false;
+  let eventReason = "";
+
+  const isTransitioningToPublished = validStatus === "PUBLISHED" && idea.status !== "PUBLISHED";
+  const isAlreadyPublishedWithBodyChange = idea.status === "PUBLISHED" && (editorBody !== undefined || validStatus === "PUBLISHED");
+
+  if (isTransitioningToPublished || isAlreadyPublishedWithBodyChange) {
+    const activeBody = editorBody !== undefined ? editorBody : idea.body;
+    contentHash = hashContent(activeBody);
+    if (contentHash === null) {
+      verificationStatus = "VERIFIED";
+      eventReason = "Content is short/empty (bypassed duplicate check)";
+    } else {
+      const duplicateId = await checkForDuplicates(contentHash, idea.id);
+      if (duplicateId) {
+        verificationStatus = "REVIEW";
+        eventReason = `Near-duplicate content detected (matched idea: ${duplicateId})`;
+      } else {
+        verificationStatus = "VERIFIED";
+        eventReason = "No duplicates found";
+      }
+    }
+    shouldCreateEvent = true;
+  }
+
   // Use a Prisma transaction so tags and links update atomically
   const updated = await prisma.$transaction(async (tx) => {
 
@@ -81,8 +110,21 @@ export async function PATCH(
         ...(validStatus === "PUBLISHED" && !(idea as unknown as { publishedAt: Date | null }).publishedAt
           ? { publishedAt: new Date() }
           : {}),
+        ...(contentHash !== undefined ? { contentHash } : {}),
+        ...(verificationStatus !== undefined ? { verificationStatus } : {}),
       },
     });
+
+    // Create verification event if needed
+    if (shouldCreateEvent && verificationStatus) {
+      await tx.verificationEvent.create({
+        data: {
+          ideaId: params.id,
+          status: verificationStatus,
+          reason: eventReason,
+        },
+      });
+    }
 
     // 2. Re-sync tags: delete all existing, then insert the new set
     if (tagIds !== undefined) {

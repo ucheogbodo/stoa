@@ -20,7 +20,7 @@ export default async function AgoraBrowsePage({ searchParams }: PageProps) {
   const ideas = await prisma.idea.findMany({
     where: {
       status: "PUBLISHED",
-      verificationStatus: { in: ["VERIFIED", "UNVERIFIED"] },
+      verificationStatus: "VERIFIED",
       ...(tagSlug ? { tags: { some: { tag: { slug: tagSlug } } } } : {}),
       ...(query   ? { title: { contains: query, mode: "insensitive" } } : {}),
     },
@@ -40,7 +40,7 @@ export default async function AgoraBrowsePage({ searchParams }: PageProps) {
         some: {
           idea: {
             status: "PUBLISHED",
-            verificationStatus: { in: ["VERIFIED", "UNVERIFIED"] },
+            verificationStatus: "VERIFIED",
           },
         },
       },

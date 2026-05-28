@@ -6,6 +6,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
 
 type Params = { params: { id: string } };
 
@@ -37,10 +40,21 @@ export async function POST(req: Request, { params }: Params) {
   const file = formData.get("file") as File | null;
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
-  // In a full implementation this would stream to Supabase Storage.
-  // For now we record the metadata and use a placeholder storageUrl.
-  // The /api/projects/[id]/files/upload-url endpoint would return a presigned URL.
-  const storageUrl = `projects/${params.id}/${Date.now()}-${file.name}`;
+  // Physically save the file content to uploads/ directory
+  const uploadsDir = path.join(process.cwd(), "uploads");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  const fileId = crypto.randomUUID();
+  const safeFilename = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+  const uniqueFilename = `${fileId}-${safeFilename}`;
+  const filePath = path.join(uploadsDir, uniqueFilename);
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  fs.writeFileSync(filePath, buffer);
+
+  const storageUrl = uniqueFilename;
 
   const projectFile = await prisma.projectFile.create({
     data: {

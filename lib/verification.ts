@@ -28,9 +28,11 @@ function extractText(body: unknown): string {
 
 /**
  * Returns a SHA-256 hash of the idea's body text.
+ * Returns null if the plain text is less than 20 characters long.
  */
-export function hashContent(body: unknown): string {
+export function hashContent(body: unknown): string | null {
   const text = extractText(body);
+  if (text.length < 20) return null;
   return crypto.createHash("sha256").update(text).digest("hex");
 }
 
@@ -40,9 +42,10 @@ export function hashContent(body: unknown): string {
  * Currently checks for exact hash matches; can be extended for fuzzy matching.
  */
 export async function checkForDuplicates(
-  contentHash: string,
+  contentHash: string | null,
   excludeIdeaId?: string
 ): Promise<string | null> {
+  if (!contentHash) return null;
   const duplicate = await prisma.idea.findFirst({
     where: {
       contentHash,

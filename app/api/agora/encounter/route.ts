@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const where: Prisma.IdeaWhereInput = {
     status: "PUBLISHED",
-    verificationStatus: { in: ["VERIFIED", "UNVERIFIED"] },
+    verificationStatus: "VERIFIED",
   };
 
   if (tagSlug) {

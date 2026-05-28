@@ -2,7 +2,7 @@
 
 > *A private digital garden for cultivating ideas — with a public agora for serendipitous discovery.*
 
-Stoa is a personal knowledge-management application built with **Next.js 15**, **Prisma**, **Supabase**, and **NextAuth**. It combines a private writing environment (the Garden) with an intentionally non-algorithmic public space (the Agora) where readers encounter ideas purely by chance.
+Stoa is a personal knowledge-management application built with **Next.js 14**, **Prisma**, **Supabase**, and **NextAuth**. It combines a private writing environment (the Garden) with an intentionally non-algorithmic public space (the Agora) where readers encounter ideas purely by chance.
 
 ---
 
@@ -65,7 +65,7 @@ Stoa rejects the engagement-maximising logic of a social media platform. There a
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js 14 (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS (custom design tokens) |
 | Database | PostgreSQL via Supabase |
@@ -73,7 +73,7 @@ Stoa rejects the engagement-maximising logic of a social media platform. There a
 | Auth | NextAuth.js v4 (Credentials provider) |
 | Editor | Tiptap v2 (ProseMirror) |
 | Graph | react-force-graph-2d |
-| File Storage | Supabase Storage (via multipart upload) |
+| File Storage | Local Disk Storage & Secure Downloader API |
 
 ---
 
@@ -274,7 +274,7 @@ npx prisma db push
 
 ## Architecture Notes
 
-- **App Router** — All routes use the Next.js 15 App Router. Server Components are used by default; Client Components are opted-in with `"use client"` only where interactivity is required.
+- **App Router** — All routes use the Next.js 14 App Router. Server Components are used by default; Client Components are opted-in with `"use client"` only where interactivity is required.
 - **Prisma singleton** — `lib/prisma.ts` uses a module-level singleton to avoid exhausting the Supabase connection pool in development hot-reload cycles.
 - **Authentication flow** — NextAuth Credentials provider validates email + bcrypt hash. Session exposes `user.id` via a custom `session` callback in `lib/auth.ts`.
 - **Verification** — `lib/verification.ts` extracts plain text from Tiptap's ProseMirror JSON and SHA-256 hashes it. Duplicate detection currently uses exact hash matching — fuzzy matching can be added without schema changes.

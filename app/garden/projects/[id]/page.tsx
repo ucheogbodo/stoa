@@ -99,12 +99,18 @@ export default async function ProjectWorkbenchPage({
           <FileUpload projectId={project.id} />
           {project.files.length > 0 && (
             <ul className="mt-4 space-y-2">
-              {project.files.map((file) => (
+               {project.files.map((file) => (
                 <li
                   key={file.id}
-                  className="flex items-center justify-between p-3 bg-parchment rounded-lg text-sm"
+                  className="flex items-center justify-between p-3 bg-parchment rounded-lg text-sm hover:bg-parchment-dark transition-colors"
                 >
-                  <span className="truncate text-ink">{file.filename}</span>
+                  <a
+                    href={`/api/projects/${project.id}/files/${file.id}`}
+                    download={file.filename}
+                    className="truncate text-ink hover:text-sage transition-colors underline decoration-parchment-border underline-offset-4 font-medium"
+                  >
+                    {file.filename}
+                  </a>
                   <span className="text-ink-muted ml-2 flex-shrink-0 text-xs">
                     {file.sizeBytes ? `${Math.round(file.sizeBytes / 1024)} KB` : ""}
                   </span>
