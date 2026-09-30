@@ -3,9 +3,11 @@
 // Server component: queries the DB directly via Prisma for efficiency.
 // Respects the profilePublic flag.
 
+import React from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+
 
 // ── Types matching Prisma JSON fields ─────────────────────────────────────────
 interface LineageEntry { name: string; url?: string }

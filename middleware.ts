@@ -5,9 +5,12 @@
 // you are redirected to /login.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { default } from "next-auth/middleware";
+import { withAuth } from "next-auth/middleware";
+
+export default withAuth;
 
 export const config = {
   // Protect everything under /garden — the private workspace
   matcher: ["/garden/:path*"],
 };
+

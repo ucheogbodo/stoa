@@ -20,9 +20,10 @@ const PROFILE_SELECT = {
   profilePublic: true,
 };
 
-function getUserId(session: Session | null) {
-  return (session?.user as { id?: string })?.id;
+function getUserId(session: Session | null | unknown) {
+  return (session as { user?: { id?: string } } | null)?.user?.id;
 }
+
 
 export async function GET() {
   const session = await getServerSession(authOptions);
