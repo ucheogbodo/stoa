@@ -32,6 +32,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# scratch work: logs, one-off scripts (never commit debug artefacts)
+/scratch/
+*.log
 
 # vercel
 .vercel

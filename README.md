@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Stoa
 
-## Getting Started
+> A garden for thinking, not a feed for content.
 
-First, run the development server:
+Stoa is a digital garden for cultivating authentic, synthesized ideas: plant raw
+thoughts, connect them, and publish only what has ripened. This is the v2 rebuild;
+see [docs/REBUILD_PLAN.md](docs/REBUILD_PLAN.md) for the vision, data model and roadmap.
+
+**Status:** Phase 0 (foundation). The app is a landing page plus `/api/health`.
+
+## Stack
+
+Next.js 16 (App Router, Cache Components, React Compiler) · React 19 · TypeScript strict ·
+Tailwind CSS 4 · Drizzle ORM + postgres.js · Postgres (Supabase) · Zod + `@t3-oss/env-nextjs` ·
+Vitest · Biome · pnpm · GitHub Actions · Vercel.
+
+All dependency versions are pinned exactly. Upgrade deliberately, one major at a time.
+
+## Getting started
+
+Requires Node 24+ and pnpm (`npm i -g pnpm`; the version is pinned in `package.json`).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local   # then fill in DATABASE_URL
+pnpm dev                     # http://localhost:3000
+curl localhost:3000/api/health   # → {"status":"ok","db":"ok",...}
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Script | What it does |
+|---|---|
+| `pnpm dev` / `build` / `start` | Next.js |
+| `pnpm check` | lint + typecheck + test (run before pushing) |
+| `pnpm lint` / `format` | Biome check / auto-fix |
+| `pnpm typecheck` | Generate route types, then `tsc --noEmit` |
+| `pnpm test` | Vitest |
+| `pnpm db:generate` / `db:migrate` / `db:studio` | Drizzle migrations and studio |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment
 
-## Learn More
+Validated by [lib/env.ts](lib/env.ts), which `next.config.ts` imports, so a missing variable
+fails the build. See [.env.example](.env.example).
 
-To learn more about Next.js, take a look at the following resources:
+| Variable | Notes |
+|---|---|
+| `DATABASE_URL` | Runtime connection. On Vercel use Supabase's **transaction pooler** (port 6543). |
+| `DATABASE_URL_DIRECT` | Optional. Direct or session connection for migrations. |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploying (Vercel)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Import the GitHub repo in Vercel. Framework: Next.js. Root directory: the repo root (`./`).
+2. Add `DATABASE_URL` for Production and Preview.
+3. Push to `main`, then check `https://<your-app>.vercel.app/api/health`.
 
-## Deploy on Vercel
+## Rules
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Every commit on `main` deploys · pinned versions · no debug artefacts in git (use `/scratch`) ·
+no local disk at runtime · Zod on every input · migrations, never `db push` · tests cover the core loop.
