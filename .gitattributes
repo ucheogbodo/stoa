@@ -1,0 +1,4 @@
+# Always LF in the repo and working tree (Biome expects LF; Windows autocrlf would otherwise convert).
+* text=auto eol=lf
+*.ico binary
+*.png binary
